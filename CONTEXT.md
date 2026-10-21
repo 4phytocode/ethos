@@ -107,8 +107,9 @@ todo.md            roadmap and known gaps
 ```
 
 `main.js.pre-restructure.bak` and `notifications.js.pre-restructure.bak` are
-the pre-restructure originals, kept because git is unusable here (see §8).
-Safe to delete once git works.
+the pre-restructure originals, and `backups/` holds an older copy of `src/`.
+They are the only history from before git was set up (§9), and they are in the
+first commit, so they can now be deleted from the working tree if wanted.
 
 ---
 
@@ -701,13 +702,13 @@ These cost real time to rediscover.
 - **Electron on Windows is a GUI-subsystem binary: `console.log` from the main
   process does not reach a parent pipe.** `console.error` sometimes does.
   To get output from an automated run, write to a file.
-- **Git is unusable in this checkout.** The repo root is `H:/`, not
-  `H:/ethos`, and is owned by `NT AUTHORITY/SYSTEM` while the user is
-  `DESKTOP-1QNSPNV/USER`, so every git command refuses with *dubious
-  ownership*. Fixing it means
-  `git config --global --add safe.directory H:/`, which edits global config
-  and scopes the repo to the whole drive — **ask the user first.** Until then
-  there is no revert safety net; make file backups before large changes.
+- **Git lives in `H:/ethos` itself** (since 2026-10-21), pushed to the private
+  repo `https://github.com/4phytocode/ethos` (`origin`, branch `main`). There
+  is also an old, empty repo at the drive root `H:/`, owned by
+  `NT AUTHORITY/SYSTEM`; git refuses it with *dubious ownership*, but the one
+  in `H:/ethos` is found first, so that no longer matters. Do not "fix" it with
+  `safe.directory H:/`, which would scope a repo to the whole drive.
+  Line-ending warnings (LF → CRLF) on `git add` are harmless (`core.autocrlf`).
 - **`protocol.handle` takes the scheme without a colon** — `'app'`, not
   `'app:'`. With the colon nothing matches and the page fails `ERR_FAILED`.
 - **Use `pathToFileURL()`, never `'file://' + path`.** On Windows the latter

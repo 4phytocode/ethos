@@ -401,7 +401,7 @@ file (or straight into `GRATITUDE`) and they can be swapped in.
 view silently replaces the first. The prompt aids work around it by being called
 from journals.js's existing hook. Make the hooks a list before more modules need them.
 
-### 8.3 git is unusable: "dubious ownership" on `H:/` (gap)
+### 8.3 git is unusable: "dubious ownership" on `H:/` (gap, **fixed** 2026-10-21: repo created in `H:/ethos`, pushed to a private GitHub repo; see CONTEXT §9)
 `H:/` is owned by SYSTEM, so every git command fails (and the remember plugin
 refuses to write its handoff). Fix with
 `git config --global --add safe.directory H:/ethos` (or the drive root), or take
@@ -513,7 +513,7 @@ list all rebuild on every snapshot. Fine at this size.
 configured. A packaged build needs electron-builder or electron-forge, plus
 the icon handed over (CONTEXT.md, "The app icon").
 
-### 10.11 Git is unusable in this folder (environment)
+### 10.11 Git is unusable in this folder (environment, **fixed**, same as 8.3)
 Same as 8.3. `safe.directory` is not set, so git and the remember plugin both
 refuse. Fix before the next commit.
 
