@@ -1,0 +1,33 @@
+/* Homepage quote. It replaces the "Welcome back." line under the heading.
+
+   The attribution is set to wrap in full. A single-line, ellipsised attribution
+   cut off the end of the author's name, which is the one part that must stay
+   readable. */
+
+.home-quote { margin: 0; flex: 1 1 320px; max-width: 560px; cursor: default; }
+
+.quote-text { margin: 0; font-size: 15px; line-height: 1.6; color: var(--fg);
+              font-style: normal; opacity: 0.82;
+              transform: translateY(0);
+              transition: opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1),
+                          transform 0.6s cubic-bezier(0.34, 1.2, 0.64, 1); }
+
+.quote-author { margin: 8px 0 0; font-size: 12px; color: var(--muted);
+                white-space: normal; text-overflow: clip;
+                max-height: 0; opacity: 0; overflow: hidden;
+                transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                            opacity 0.35s ease 0.05s,
+                            margin-top 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+
+/* On hover the quote comes forward, and the author line unfolds beneath it.
+   The author is still in the layout while folded away, so the card does not
+   jump when it opens. Clicking does nothing. */
+.home-quote:hover .quote-text { opacity: 1; transform: translateY(-2px); }
+.home-quote:hover .quote-author { max-height: 3em; opacity: 1; }
+
+/* Shown in full on touch or keyboard focus, where hover is not available. */
+.home-quote:focus-within .quote-author { max-height: 3em; opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .quote-text, .quote-author { transition-duration: 0.01ms; }
+}

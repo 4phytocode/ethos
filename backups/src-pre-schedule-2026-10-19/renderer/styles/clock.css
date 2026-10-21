@@ -1,0 +1,36 @@
+/* Homepage clock. No ring and no numerals — the readout on top, then tick
+   marks and three hands below it. */
+
+.clock { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
+
+/* The readout sits above the face rather than inside it. In the middle it
+   crowded the pivot and had to mask the hands with a slab of background; up
+   here the centre of the face is left clear. */
+.clock-readout { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.clock-time { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0.01em;
+              font-variant-numeric: tabular-nums; }
+.clock-day { margin: 0; font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+
+.clock-face { width: 200px; height: 200px; display: block; overflow: visible;
+              /* `auto` lets the renderer drop to optimizeSpeed, which is what
+                 made thin diagonal strokes look like a low-resolution bitmap.
+                 geometricPrecision keeps full-quality antialiasing. */
+              shape-rendering: geometricPrecision; }
+
+.clock-tick { stroke: var(--muted); stroke-width: 1.1; stroke-linecap: round; }
+
+/* All three hands pivot on the centre of the viewBox. The transition carries
+   each tick so the movement reads as a sweep rather than a jump; because the
+   angles only ever increase, it never unwinds backwards at the top of a turn. */
+.clock-hand { stroke: var(--fg); stroke-linecap: round; transform-origin: 100px 100px;
+              transition: transform 0.42s cubic-bezier(0.34, 1.42, 0.64, 1); }
+.clock-hand.hour { stroke-width: 1.7; }
+.clock-hand.minute { stroke-width: 1.2; }
+/* The second hand is the thinnest and the only one in the muted tone, so the
+   face still reads at a glance. */
+.clock-hand.second { stroke-width: 0.8; stroke: var(--muted); }
+.clock-pin { fill: var(--fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .clock-hand { transition: none; }
+}

@@ -1,0 +1,153 @@
+/* Theme tokens, shell layout, and the chrome that is present on every view. */
+
+/* Scrollbars. Standard properties, so the bar takes the theme directly. The
+   thumb is a soft tint of the foreground colour, which reads as grey on the
+   dark page and as grey on the light page, with a clear track in both.
+   Do not add ::-webkit-scrollbar rules: in this Electron build they broke
+   scrolling in tests and the standard properties are what the bar follows. */
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg) 26%, transparent) transparent; }
+
+
+:root { --bg: #ffffff; --fg: #000000; --muted: #6b6b6b; --line: #e0e0e0;
+        --card: #f5f5f5; --hover: #ebebeb; }
+body.dark { --bg: #0a0a0a; --fg: #ffffff; --muted: #9a9a9a; --line: #222222;
+            --card: #141414; --hover: #1e1e1e; }
+
+* { box-sizing: border-box; }
+/* A class that sets display (flex, grid) otherwise beats the hidden attribute's
+   UA rule, leaving a "hidden" element invisible but still catching clicks. */
+[hidden] { display: none !important; }
+html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
+/* One switchable family for the whole app, set from Settings > Appearance.
+   The fallback keeps the app readable if the preference is missing or names a
+   font that is not installed. */
+body { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
+       transition: background 0.25s, color 0.25s;
+       overflow: hidden; user-select: none; }
+
+/* === Brand, top left === */
+/* The logo is fixed, so a scrolling view slides underneath it. Without a
+   backing, that text shows through the letters. The backing is the page colour
+   with a soft fade on the far edge, so the logo stays readable and the content
+   simply disappears under it. */
+.brand { position: fixed; top: 0; left: 0; display: flex; align-items: center; gap: 8px;
+         padding: 16px 22px 14px 24px; box-sizing: border-box;
+         font-size: 18px; font-weight: 700; z-index: 10; cursor: pointer;
+         color: var(--fg);
+         /* A soft halo in the page colour. Content scrolling underneath is
+            knocked back around the mark, so it does not show through the
+            letters. The colour is the page background, so it is invisible
+            against an empty page and follows dark and light. */
+         filter: drop-shadow(0 0 4px var(--bg)) drop-shadow(0 1px 6px var(--bg));
+         transition: opacity 0.3s ease, color 0.25s ease; }
+#brand-logo,
+#brand-logo circle,
+#brand-logo text { color: var(--fg); fill: currentColor; }
+
+/* === Right sidebar === lives in sidebar.css. Its width is --sb-w on body;
+   views and the habit bar take their right edge from it. */
+body { --sb-w: 236px; }
+body.sb-hidden { --sb-w: 0px; }
+
+/* Keeps a readable name for screen readers where the visible text has been
+   replaced by artwork. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+           overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* === Views === */
+/* The view is inset from the top and bottom of the window so its scroll bar
+   stops short of both edges. The track's length is the view's height, so this
+   shortens the bar itself. Content keeps its own padding, so nothing is cut
+   off. Standard properties only; see the scrollbar note in CONTEXT.md. */
+.view { display: none; position: absolute; top: 14px; bottom: 14px; left: 0; right: var(--sb-w);
+        overflow-y: auto; transition: right 0.46s cubic-bezier(0.34, 1.2, 0.64, 1); }
+.view.active { display: flex; }
+
+/* === Homepage === */
+#home { flex-direction: column; padding: 80px 36px 56px; gap: 28px; }
+#home h1 { font-size: 36px; font-weight: 700; margin: 0 0 8px; }
+/* Takes the space left between the heading and the habit bar. */
+/* Clock on the left, to-do card beside it. */
+.home-row { display: flex; align-items: center; gap: 48px; flex-wrap: wrap; }
+.home-clock { display: flex; align-items: center; justify-content: flex-start; }
+
+.todo-card { flex: 1 1 460px; min-width: 340px; max-width: 680px; min-height: 340px;
+             padding: 24px 28px; border-radius: 10px; display: flex; flex-direction: column;
+             background: var(--card); border: 1px solid var(--line); }
+.todo-card-head { display: flex; align-items: center; justify-content: space-between;
+                  margin-bottom: 18px; }
+.todo-card h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.todo-card-open { padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px;
+                  background: transparent; color: var(--muted); font-family: inherit;
+                  font-size: 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.todo-card-open:hover { border-color: var(--fg); color: var(--fg); }
+.todo-card-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+                  gap: 4px; overflow-y: auto; max-height: 300px; }
+.todo-empty { margin: auto 0 0; padding-top: 14px; font-size: 13px; color: var(--muted); }
+
+/* Back arrow, top right (inside views with sidebar) */
+.back { position: absolute; top: 16px; right: 16px; width: 36px; height: 36px; border: 0;
+        background: transparent; cursor: pointer; color: var(--fg);
+        display: flex; align-items: center; justify-content: center; z-index: 5; }
+.back:hover { opacity: 0.6; }
+
+/* === Placeholder pages === */
+.placeholder { flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.placeholder h2 { margin: 0; font-size: 28px; font-weight: 700; }
+.placeholder p { margin: 0; color: var(--muted); }
+
+/* === Light / dark toggle, bottom left ===
+   Theme is set once and rarely changed, so the control does not earn permanent
+   screen space. It rests as a small round cover and flows open on hover, then
+   closes again when the pointer leaves.
+
+   The whole reveal is CSS: :hover for the pointer, :has(:focus-visible) so the
+   buttons stay reachable by keyboard — tabbing into them opens the dock exactly
+   as hovering does. It is :focus-visible rather than :focus-within on purpose:
+   clicking a button also focuses it, and :focus-within would then latch the
+   dock open after the pointer had already left. :focus-visible only matches
+   keyboard focus, so a mouse click lets it close normally.
+
+   The buttons are never display:none or visibility:hidden, because either
+   would take them out of the tab order and make the control
+   keyboard-inaccessible. */
+#toggle { position: fixed; bottom: 20px; left: 24px; z-index: 10;
+          display: flex; align-items: center; gap: 4px;
+          width: 40px; height: 40px; padding: 4px;
+          border-radius: 999px; background: var(--card); overflow: hidden;
+          /* Slight overshoot on the way open is what reads as "fluid" rather
+             than merely "animated"; colour and shadow settle on a plain ease. */
+          transition: width 0.44s cubic-bezier(0.34, 1.4, 0.64, 1),
+                      box-shadow 0.3s ease, background 0.25s ease; }
+#toggle:hover, #toggle:has(:focus-visible) { width: 92px; box-shadow: 0 2px 14px rgba(0, 0, 0, 0.1); }
+body.dark #toggle:hover, body.dark #toggle:has(:focus-visible) { box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45); }
+
+/* The cover itself: centred on the collapsed dock, spun away as it opens. */
+.toggle-cover { position: absolute; left: 0; top: 0; width: 40px; height: 40px;
+                display: flex; align-items: center; justify-content: center;
+                color: var(--muted); pointer-events: none;
+                transition: opacity 0.22s ease,
+                            transform 0.44s cubic-bezier(0.34, 1.4, 0.64, 1); }
+#toggle:hover .toggle-cover, #toggle:has(:focus-visible) .toggle-cover {
+  opacity: 0; transform: scale(0.55) rotate(-100deg); }
+
+#toggle button { flex: none; width: 40px; height: 32px; border: 0; border-radius: 999px;
+                 cursor: pointer; display: flex; align-items: center; justify-content: center;
+                 background: transparent; color: var(--muted);
+                 opacity: 0; transform: translateX(-10px) scale(0.8); pointer-events: none;
+                 transition: opacity 0.26s ease,
+                             transform 0.44s cubic-bezier(0.34, 1.4, 0.64, 1),
+                             background 0.15s, color 0.15s; }
+#toggle:hover button, #toggle:has(:focus-visible) button {
+  opacity: 1; transform: none; pointer-events: auto; }
+/* The far button trails the near one very slightly, so the pair reads as one
+   movement unfolding rather than two things appearing at once. */
+#toggle:hover #night, #toggle:has(:focus-visible) #night { transition-delay: 0.04s; }
+
+/* Active state no longer rides on opacity, which the reveal now owns. */
+#toggle button.active { background: var(--bg); color: var(--fg); }
+#toggle button:hover { color: var(--fg); }
+
+@media (prefers-reduced-motion: reduce) {
+  #toggle, .toggle-cover, #toggle button { transition-duration: 0.01ms; }
+}

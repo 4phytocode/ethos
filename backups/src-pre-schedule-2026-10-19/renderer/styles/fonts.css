@@ -1,0 +1,31 @@
+/* Bundled faces. Loaded lazily by the browser: nothing is fetched until a
+   surface actually renders in the family, so System UI users pay nothing. */
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 400; font-display: swap;
+             src: url('../fonts/IBMPlexMono-Regular.ttf') format('truetype'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 500; font-display: swap;
+             src: url('../fonts/IBMPlexMono-Medium.ttf') format('truetype'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 600; font-display: swap;
+             src: url('../fonts/IBMPlexMono-SemiBold.ttf') format('truetype'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: normal; font-weight: 700; font-display: swap;
+             src: url('../fonts/IBMPlexMono-Bold.ttf') format('truetype'); }
+@font-face { font-family: 'IBM Plex Mono'; font-style: italic; font-weight: 400; font-display: swap;
+             src: url('../fonts/IBMPlexMono-Italic.ttf') format('truetype'); }
+
+/* Tuning for IBM Plex Mono. A monospace face is wider and heavier than a UI
+   sans at the same size, so on its own it reads dense. These soften it:
+   slightly tighter tracking, headings one weight lighter, and a touch more
+   line height for prose. Scoped by the attribute applyFont() sets, so System UI
+   is untouched. */
+html[data-font="plex-mono"] body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
+html[data-font="plex-mono"] h1,
+html[data-font="plex-mono"] h2,
+html[data-font="plex-mono"] .jp-title,
+html[data-font="plex-mono"] .page-card .name,
+html[data-font="plex-mono"] .set-preview-title { font-weight: 600; letter-spacing: -0.02em; }
+html[data-font="plex-mono"] #journal-page textarea,
+html[data-font="plex-mono"] .jr-preview,
+html[data-font="plex-mono"] .quote-text,
+html[data-font="plex-mono"] .set-preview-text { line-height: 1.7; }
+/* Monospace runs about 15% wider than the sans, so the 20px writing surface
+   steps down to keep a similar line length. */
+html[data-font="plex-mono"] #journal-page textarea { font-size: 17px; }

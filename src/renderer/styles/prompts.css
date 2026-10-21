@@ -1,0 +1,59 @@
+/* Journal page aids: the paper switch, "Show prompts", the empty-page nudge and
+   the prompt card. All anchored top right, left of the back arrow. */
+
+.jp-aids { position: absolute; top: 18px; right: 64px; display: flex; align-items: center; gap: 10px; z-index: 6; }
+
+.jp-paper { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--card); }
+.jp-paper button { padding: 4px 11px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; transition: background 0.15s, color 0.15s; }
+.jp-paper button:hover { color: var(--fg); }
+.jp-paper button.on { background: var(--fg); color: var(--bg); }
+
+.jp-prompts-btn { padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg);
+  color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.15s; }
+.jp-prompts-btn:hover, .jp-prompts-btn[aria-expanded="true"] { border-color: var(--fg); }
+
+/* The nudge: a quiet card that floats in under the controls. */
+.jp-nudge { position: absolute; top: 58px; right: 64px; max-width: 300px; z-index: 6;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+  color: var(--fg); font-family: inherit; font-size: 13px; line-height: 1.5; text-align: left; cursor: pointer;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.08);
+  animation: jp-in 0.45s cubic-bezier(0.34, 1.3, 0.64, 1); }
+.jp-nudge:hover { border-color: var(--fg); }
+
+.jp-prompts { position: absolute; top: 58px; right: 64px; width: 340px; z-index: 7;
+  padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--card);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  display: flex; flex-direction: column; gap: 12px;
+  animation: jp-in 0.4s cubic-bezier(0.34, 1.3, 0.64, 1); }
+body.dark .jp-prompts, body.dark .jp-nudge { box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+.jp-prompt-kinds { display: flex; gap: 3px; padding: 3px; border-radius: 999px; background: var(--bg); align-self: flex-start; }
+.jp-prompt-kinds button { padding: 5px 14px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.jp-prompt-kinds button.on { background: var(--fg); color: var(--bg); }
+.jp-prompt-text { margin: 0; font-size: 15px; line-height: 1.55; min-height: 3em; user-select: text; }
+.jp-prompt-actions { display: flex; gap: 8px; align-items: center; }
+.jp-prompt-actions button { padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: transparent; color: var(--fg); font-family: inherit; font-size: 12px; cursor: pointer; }
+.jp-prompt-actions button:hover { border-color: var(--fg); }
+.jp-prompt-actions .jp-prompt-use { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.jp-prompt-actions .jp-prompt-no { margin-left: auto; border: 0; color: var(--muted); }
+
+@keyframes jp-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: none; } }
+
+/* Paper. Rules are one line-height apart (1lh) so they sit under the text at
+   any font size, and scroll with it (background-attachment: local). */
+#journal-page textarea[data-paper="lines"],
+#journal-page textarea[data-paper="grid"] { background-attachment: local; background-position: 0 -1px; }
+#journal-page textarea[data-paper="lines"] {
+  background-image: linear-gradient(to bottom, transparent calc(1lh - 1px), var(--line) calc(1lh - 1px));
+  background-size: 100% 1lh; }
+#journal-page textarea[data-paper="grid"] {
+  background-image:
+    linear-gradient(to bottom, transparent calc(1lh - 1px), var(--line) calc(1lh - 1px)),
+    linear-gradient(to right, transparent calc(1lh - 1px), var(--line) calc(1lh - 1px));
+  background-size: 1lh 1lh; }
+
+@media (prefers-reduced-motion: reduce) {
+  .jp-nudge, .jp-prompts { animation: none; }
+}

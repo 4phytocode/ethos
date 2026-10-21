@@ -1,0 +1,75 @@
+/* The background behind every view: a slow moving gradient, or the user's own
+   image. Set from Settings > Background; see js/backdrop.js.
+
+   Readability rule: the backdrop is always drawn under a veil of the page
+   colour (--bg), so text set in --fg keeps its contrast whatever is behind it.
+   Cards keep their own opaque --card fill on top of that. Do not lower the veil
+   to make the image "pop": that is the one thing that makes text hard to read.
+
+   It sits first in <body> with no z-index, so every later positioned element
+   paints over it, and pointer-events: none keeps it out of every click. */
+
+#backdrop { position: fixed; inset: 0; pointer-events: none; overflow: hidden;
+            opacity: 0; transition: opacity 0.6s ease; }
+body[data-bg="gradient"] #backdrop,
+body[data-bg="image"] #backdrop { opacity: 1; }
+/* Homepage only: hidden on every other view. */
+body[data-bg-scope="home"]:not([data-view="home"]) #backdrop { opacity: 0; }
+
+/* Gradient: three soft colour fields drifting on long, offset loops. Each
+   layer moves on its own period, so the pattern never visibly repeats. */
+#backdrop::before { content: ""; position: absolute; inset: -30%;
+  background:
+    radial-gradient(38% 42% at 20% 30%, var(--bd-a), transparent 70%),
+    radial-gradient(34% 40% at 78% 24%, var(--bd-b), transparent 70%),
+    radial-gradient(42% 46% at 55% 82%, var(--bd-c), transparent 70%);
+  filter: blur(40px);
+  opacity: 0; transition: opacity 0.6s ease;
+  animation: bd-drift var(--bd-speed, 46s) ease-in-out infinite alternate; }
+body[data-bg="gradient"] #backdrop::before { opacity: 1; }
+
+/* Palettes, light then dark. "custom" sets --bd-a/b/c inline from Settings.
+   The swatches in Settings read the same variables (--sw-*). */
+:root { --bd-veil: 0.42; }
+body.dark { --bd-veil: 0.5; }
+body, [data-palette="aurora"] { --bd-a: #c7d7fe; --bd-b: #fbcfe8; --bd-c: #bbf7d0; }
+body.dark, body.dark [data-palette="aurora"] { --bd-a: #1e3a8a; --bd-b: #581c87; --bd-c: #134e4a; }
+body[data-bg-palette="dawn"], [data-palette="dawn"] { --bd-a: #fed7aa; --bd-b: #fecdd3; --bd-c: #fde68a; }
+body.dark[data-bg-palette="dawn"], body.dark [data-palette="dawn"] { --bd-a: #7c2d12; --bd-b: #831843; --bd-c: #713f12; }
+body[data-bg-palette="ocean"], [data-palette="ocean"] { --bd-a: #bae6fd; --bd-b: #a5f3fc; --bd-c: #c7d2fe; }
+body.dark[data-bg-palette="ocean"], body.dark [data-palette="ocean"] { --bd-a: #0c4a6e; --bd-b: #164e63; --bd-c: #312e81; }
+body[data-bg-palette="forest"], [data-palette="forest"] { --bd-a: #bbf7d0; --bd-b: #d9f99d; --bd-c: #a7f3d0; }
+body.dark[data-bg-palette="forest"], body.dark [data-palette="forest"] { --bd-a: #14532d; --bd-b: #365314; --bd-c: #064e3b; }
+body[data-bg-palette="dusk"], [data-palette="dusk"] { --bd-a: #ddd6fe; --bd-b: #f5d0fe; --bd-c: #fecaca; }
+body.dark[data-bg-palette="dusk"], body.dark [data-palette="dusk"] { --bd-a: #4c1d95; --bd-b: #701a75; --bd-c: #7f1d1d; }
+
+body[data-bg-speed="slow"] { --bd-speed: 90s; }
+body[data-bg-speed="normal"] { --bd-speed: 46s; }
+body[data-bg-speed="fast"] { --bd-speed: 20s; }
+
+@keyframes bd-drift {
+  0%   { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+  50%  { transform: translate3d(6%, -4%, 0) rotate(8deg) scale(1.08); }
+  100% { transform: translate3d(-5%, 5%, 0) rotate(-6deg) scale(1.02); }
+}
+
+/* Image: covers the window, drifts very slightly so it does not feel pasted on. */
+.bd-image { position: absolute; inset: -4%; background-size: cover; background-position: center;
+            opacity: 0; transition: opacity 0.6s ease;
+            animation: bd-pan 60s ease-in-out infinite alternate; }
+body[data-bg="image"] .bd-image { opacity: 1; }
+@keyframes bd-pan { from { transform: scale(1.02) translate3d(-1%, 0, 0); }
+                    to   { transform: scale(1.06) translate3d(1%, -1%, 0); } }
+
+/* The veil. Stronger for images, which can be busy or high contrast. */
+#backdrop::after { content: ""; position: absolute; inset: 0; background: var(--bg);
+                   opacity: var(--bd-veil); }
+body[data-bg="image"] #backdrop::after { opacity: 0.72; }
+
+/* With a backdrop on, the page itself must not paint over it. */
+body[data-bg="gradient"], body[data-bg="image"] { background: var(--bg); }
+body[data-bg="gradient"] .view, body[data-bg="image"] .view { background: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  #backdrop::before, .bd-image { animation: none; }
+}

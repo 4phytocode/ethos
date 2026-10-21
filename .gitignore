@@ -1,0 +1,15 @@
+# Dependencies: restored with `npm install`
+node_modules/
+
+# Local tool state (Claude Code remember plugin), not project files
+.remember/
+
+# OS / editor noise
+Thumbs.db
+desktop.ini
+.DS_Store
+.vscode/
+
+# Packaged builds, once a packager is configured
+dist/
+out/

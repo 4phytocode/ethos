@@ -1,0 +1,281 @@
+/* The schedule: rail (mini month, up next), header controls, week/day time
+   grid, month grid, the ink that follows a drag, and the event editor.
+
+   Monochrome by default. An event's colour is the one accent, carried in
+   --ev (set from JS, and only ever to a palette value checked in main). */
+
+#schedule-page { flex-direction: column; padding: 58px 22px 14px 24px; overflow: hidden; }
+.sc-shell { flex: 1; min-height: 0; display: flex; gap: 22px; }
+
+/* === Rail === */
+.sc-rail { flex: none; width: 214px; display: flex; flex-direction: column; gap: 26px;
+           overflow-y: auto; padding: 4px 0 52px; }
+@media (max-width: 1080px) { .sc-rail { display: none; } }
+
+.sc-mini-head { display: flex; align-items: center; gap: 2px; margin-bottom: 8px; padding-left: 4px; }
+.sc-mini-title { flex: 1; font-size: 13px; font-weight: 600; }
+.sc-mini-nav { width: 24px; height: 24px; border: 0; border-radius: 6px; background: transparent;
+               color: var(--muted); font-family: inherit; font-size: 16px; line-height: 1; cursor: pointer;
+               transition: background 0.15s, color 0.15s; }
+.sc-mini-nav:hover { background: var(--hover); color: var(--fg); }
+.sc-mini-grid { display: grid; grid-template-columns: repeat(7, 1fr); row-gap: 2px; }
+.sc-mini-dow { text-align: center; font-size: 10px; color: var(--muted); padding-bottom: 4px; }
+.sc-mini-day { position: relative; height: 27px; border: 0; padding: 0; border-radius: 999px;
+               background: transparent; color: var(--fg); font-family: inherit; font-size: 11.5px;
+               font-variant-numeric: tabular-nums; cursor: pointer;
+               transition: background 0.15s, color 0.15s, transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1); }
+.sc-mini-day:hover { background: var(--hover); transform: scale(1.08); }
+.sc-mini-day.out { color: var(--muted); opacity: 0.5; }
+.sc-mini-day.inrange { background: var(--card); border-radius: 0; }
+.sc-mini-day.today { box-shadow: inset 0 0 0 1.5px var(--fg); }
+.sc-mini-day.sel { background: var(--fg); color: var(--bg); border-radius: 999px; }
+.sc-mini-day.has::after { content: ''; position: absolute; left: 50%; bottom: 3px; width: 3px; height: 3px;
+                          margin-left: -1.5px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+.sc-rail-head { margin: 0 0 8px; padding-left: 4px; font-size: 11px; font-weight: 600;
+                letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.sc-agenda { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.sc-agenda-item { width: 100%; display: flex; align-items: flex-start; gap: 9px; padding: 7px 6px;
+                  border: 0; border-radius: 8px; background: transparent; color: var(--fg);
+                  font-family: inherit; text-align: left; cursor: pointer;
+                  transition: background 0.15s, transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.sc-agenda-item:hover { background: var(--hover); transform: translateX(-2px); }
+.sc-dot { --ev: var(--muted); flex: none; width: 7px; height: 7px; margin-top: 5px; border-radius: 50%; background: var(--ev); }
+.sc-agenda-text { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.sc-agenda-title { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-agenda-when { font-size: 11px; color: var(--muted); }
+.sc-agenda-empty { padding: 4px 6px; font-size: 12px; color: var(--muted); }
+
+.sc-hint { margin: auto 0 0; padding: 0 4px; font-size: 11px; line-height: 1.7; color: var(--muted); }
+.sc-hint kbd { display: inline-block; min-width: 16px; padding: 0 4px; border: 1px solid var(--line);
+               border-radius: 4px; font-family: inherit; font-size: 10px; text-align: center; line-height: 15px; }
+
+/* === Header === */
+.sc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.sc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+           flex-wrap: wrap; padding-bottom: 14px; }
+.sc-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+.sc-controls { display: flex; align-items: center; gap: 8px; }
+
+.sc-btn { height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+          background: transparent; color: var(--fg); font-family: inherit; font-size: 12.5px; cursor: pointer;
+          transition: border-color 0.15s, background 0.15s, color 0.15s; }
+.sc-btn:hover { border-color: var(--fg); }
+.sc-btn[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.sc-danger:hover { border-color: #ef4444; color: #ef4444; }
+.sc-step { display: flex; }
+.sc-icon { width: 30px; height: 30px; border: 0; border-radius: 8px; background: transparent; color: var(--fg);
+           display: flex; align-items: center; justify-content: center; cursor: pointer;
+           transition: background 0.15s; }
+.sc-icon:hover { background: var(--hover); }
+.sc-add { width: 30px; height: 30px; border: 0; border-radius: 50%; background: var(--fg); color: var(--bg);
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          transition: transform 0.36s cubic-bezier(0.34, 1.6, 0.64, 1); }
+.sc-add:hover { transform: scale(1.1) rotate(90deg); }
+
+/* The highlight is one element that slides and stretches between options. */
+.sc-seg { position: relative; display: flex; padding: 3px; border-radius: 9px; background: var(--card); }
+.sc-seg button { position: relative; z-index: 1; height: 24px; padding: 0 12px; border: 0; border-radius: 7px;
+                 background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer;
+                 transition: color 0.2s; }
+.sc-seg button.active { color: var(--fg); font-weight: 600; }
+.sc-seg-pill { position: absolute; top: 3px; bottom: 3px; left: 0; border-radius: 7px; background: var(--bg);
+               box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+               transition: transform 0.5s cubic-bezier(0.34, 1.35, 0.64, 1),
+                           width 0.5s cubic-bezier(0.34, 1.35, 0.64, 1); }
+
+/* === Stage and the slide between ranges === */
+.sc-stage { flex: 1; min-height: 0; display: flex; }
+.sc-week, .sc-month { flex: 1; min-width: 0; display: flex; flex-direction: column;
+                      border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg); }
+.sc-in-next { animation: sc-in-next 0.46s cubic-bezier(0.34, 1.25, 0.64, 1); }
+.sc-in-prev { animation: sc-in-prev 0.46s cubic-bezier(0.34, 1.25, 0.64, 1); }
+@keyframes sc-in-next { from { opacity: 0; transform: translateX(26px); } }
+@keyframes sc-in-prev { from { opacity: 0; transform: translateX(-26px); } }
+
+/* === Week and day === */
+/* Head and all-day rows reserve the same scrollbar gutter as the grid, so the
+   columns line up exactly. */
+.sc-week-head, .sc-allday { flex: none; display: grid; grid-template-columns: 56px repeat(var(--days), 1fr);
+                            overflow-y: hidden; scrollbar-gutter: stable; }
+.sc-week-head { border-bottom: 1px solid var(--line); }
+.sc-gutter-cell { min-width: 0; }
+.sc-dayhead { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 0 6px;
+              border: 0; background: transparent; color: var(--fg); font-family: inherit; cursor: pointer;
+              transition: background 0.15s; }
+.sc-dayhead:hover { background: var(--card); }
+.sc-dow { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.sc-dnum { min-width: 28px; height: 28px; padding: 0 6px; border-radius: 999px; font-size: 16px;
+           display: flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.sc-dayhead.today .sc-dnum { background: var(--fg); color: var(--bg); font-weight: 600; }
+.sc-dayhead.today .sc-dow { color: var(--fg); }
+
+.sc-allday { border-bottom: 1px solid var(--line); min-height: 30px; }
+.sc-allday-label { font-size: 10px; color: var(--muted); text-align: right; padding: 8px 8px 0 0; }
+.sc-allday-cell { min-width: 0; padding: 3px 3px 4px; display: flex; flex-direction: column; gap: 2px;
+                  border-left: 1px solid var(--line); cursor: copy; transition: background 0.2s; }
+
+.sc-scroll { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
+.sc-grid { position: relative; display: grid; grid-template-columns: 56px 1fr; }
+.sc-gutter { position: relative; }
+.sc-hour { position: absolute; right: 8px; transform: translateY(-50%); font-size: 10px; color: var(--muted);
+           white-space: nowrap; }
+
+/* Hour lines are one background, so a week costs no extra elements. */
+.sc-cols { position: relative; display: grid; grid-template-columns: repeat(var(--days), 1fr);
+           background-image: repeating-linear-gradient(to bottom, var(--line) 0, var(--line) 1px,
+                                                       transparent 1px, transparent 52px);
+           cursor: cell; touch-action: none; }
+.sc-col { position: relative; min-width: 0; border-left: 1px solid var(--line); }
+.sc-col.today { background: color-mix(in srgb, var(--fg) 2.5%, transparent); }
+
+.sc-ev { --ev: var(--muted); position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 1px;
+         padding: 4px 7px 4px 9px; border-radius: 7px; overflow: hidden;
+         background: color-mix(in srgb, var(--ev) 15%, var(--bg));
+         box-shadow: inset 3px 0 0 var(--ev);
+         color: var(--fg); font-size: 12px; line-height: 1.25; cursor: grab;
+         transition: box-shadow 0.2s, opacity 0.2s, filter 0.2s; }
+.sc-ev:hover { filter: brightness(0.97); z-index: 2; }
+body.dark .sc-ev:hover { filter: brightness(1.12); }
+.sc-ev:focus-visible { outline: 2px solid var(--fg); outline-offset: 1px; }
+.sc-ev-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sc-ev-time { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.sc-ev.short { flex-direction: row; align-items: center; gap: 6px; padding-top: 1px; padding-bottom: 1px; }
+/* In one line the title keeps its room and the time gives way. */
+.sc-ev.short .sc-ev-title { flex: 0 1 auto; min-width: 3ch; }
+.sc-ev.short .sc-ev-time { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.sc-ev.done { opacity: 0.55; }
+.sc-ev.done .sc-ev-title { text-decoration: line-through; }
+.sc-ev.selected { z-index: 3; box-shadow: inset 3px 0 0 var(--ev), 0 0 0 1.5px var(--ev), 0 8px 22px rgba(0, 0, 0, 0.14); }
+.sc-ev.ghosted, .sc-chip.ghosted { opacity: 0.28; }
+
+/* The lower edge stretches the event. A small bar shows on hover. */
+.sc-ev-grip { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; cursor: ns-resize; }
+.sc-ev-grip::after { content: ''; position: absolute; left: 50%; bottom: 2px; width: 18px; height: 3px; margin-left: -9px;
+                     border-radius: 2px; background: var(--ev); opacity: 0; transition: opacity 0.15s; }
+.sc-ev:hover .sc-ev-grip::after { opacity: 0.7; }
+
+/* Freshly drawn: the block wipes open from the top, as if still being inked. */
+.sc-ev.born { animation: sc-born 0.5s cubic-bezier(0.34, 1.3, 0.64, 1); }
+@keyframes sc-born { from { clip-path: inset(0 0 100% 0 round 7px); transform: scale(1.03); } }
+/* Dropped after a move or stretch: a small wobble as it settles. */
+.sc-ev.landed { animation: sc-landed 0.48s cubic-bezier(0.34, 1.5, 0.64, 1); }
+@keyframes sc-landed { 0% { transform: scale(1.04, 0.96); } 55% { transform: scale(0.985, 1.015); } }
+
+.sc-now { position: absolute; z-index: 4; height: 2px; margin-top: -1px; background: #ef4444; pointer-events: none; }
+.sc-now::before { content: ''; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px;
+                  border-radius: 50%; background: #ef4444; }
+
+/* === Ink: what a drag draws === */
+.sc-ink-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+.sc-ink { --ev: var(--fg); position: absolute; left: 0; top: 0; display: flex; flex-direction: column; gap: 1px;
+          padding: 4px 8px 4px 10px; border-radius: 9px; overflow: hidden;
+          background: color-mix(in srgb, var(--ev) 24%, var(--bg));
+          box-shadow: inset 3px 0 0 var(--ev), 0 12px 28px rgba(0, 0, 0, 0.18);
+          color: var(--fg); font-size: 12px; transform-origin: top center; will-change: transform, width, height;
+          animation: sc-ink-in 0.32s cubic-bezier(0.34, 1.4, 0.64, 1); }
+/* Starts as a drop and spreads into a block. */
+@keyframes sc-ink-in { from { border-radius: 50%; opacity: 0.2; } }
+.sc-ink-title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sc-ink-time { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* === Chips (all-day row and month) === */
+.sc-chip { --ev: var(--muted); display: flex; align-items: center; gap: 5px; min-width: 0;
+           padding: 2px 6px 2px 8px; border-radius: 5px; background: color-mix(in srgb, var(--ev) 15%, var(--bg));
+           box-shadow: inset 2px 0 0 var(--ev); color: var(--fg); font-size: 11.5px; line-height: 1.35;
+           white-space: nowrap; overflow: hidden; cursor: grab; touch-action: none;
+           transition: opacity 0.2s, transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1); }
+.sc-chip:hover { transform: translateX(1px); }
+.sc-chip-time { flex: none; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sc-chip-title { overflow: hidden; text-overflow: ellipsis; }
+.sc-chip.done { opacity: 0.55; text-decoration: line-through; }
+.sc-chip.selected { box-shadow: inset 2px 0 0 var(--ev), 0 0 0 1.5px var(--ev); }
+.sc-chip.born { animation: sc-born 0.5s cubic-bezier(0.34, 1.3, 0.64, 1); }
+.sc-chip.landed { animation: sc-landed 0.48s cubic-bezier(0.34, 1.5, 0.64, 1); }
+.sc-chip-ink { position: fixed; left: 0; top: 0; z-index: 300; pointer-events: none; opacity: 1;
+               box-shadow: inset 2px 0 0 var(--ev), 0 12px 28px rgba(0, 0, 0, 0.2); will-change: transform;
+               animation: sc-ink-in 0.28s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.drop { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+
+/* === Month === */
+.sc-month-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--line); }
+.sc-month-head span { padding: 8px 10px 6px; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase;
+                      color: var(--muted); }
+.sc-month-grid { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(7, 1fr);
+                 grid-template-rows: repeat(6, minmax(0, 1fr)); touch-action: none; }
+.sc-mcell { min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 2px; padding: 4px 5px;
+            overflow: hidden; border-left: 1px solid var(--line); border-top: 1px solid var(--line);
+            cursor: copy; transition: background 0.2s; }
+.sc-mcell:nth-child(7n + 1) { border-left: 0; }
+.sc-mcell:nth-child(-n + 7) { border-top: 0; }
+.sc-mcell.out { background: color-mix(in srgb, var(--fg) 1.5%, transparent); }
+.sc-mcell.out .sc-mdate { color: var(--muted); opacity: 0.6; }
+.sc-mdate { align-self: flex-start; min-width: 22px; height: 22px; padding: 0 5px; border: 0; border-radius: 999px;
+            background: transparent; color: var(--fg); font-family: inherit; font-size: 11.5px;
+            font-variant-numeric: tabular-nums; cursor: pointer; transition: background 0.15s; }
+.sc-mdate:hover { background: var(--hover); }
+.sc-mcell.today .sc-mdate { background: var(--fg); color: var(--bg); font-weight: 600; }
+.sc-more { align-self: flex-start; padding: 0 6px; border: 0; background: transparent; color: var(--muted);
+           font-family: inherit; font-size: 11px; cursor: pointer; }
+.sc-more:hover { color: var(--fg); }
+
+/* === Editor popover === */
+.sc-pop { position: fixed; z-index: 150; width: 300px; display: flex; flex-direction: column; gap: 10px;
+          padding: 14px 14px 12px; border: 1px solid color-mix(in srgb, var(--fg) 10%, transparent);
+          border-radius: 14px; background: color-mix(in srgb, var(--card) 90%, transparent);
+          backdrop-filter: blur(18px) saturate(1.3);
+          box-shadow: 0 18px 50px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.08);
+          opacity: 0; transform: scale(0.94) translateY(4px); pointer-events: none;
+          transition: opacity 0.16s ease, transform 0.42s cubic-bezier(0.34, 1.45, 0.64, 1); }
+.sc-pop.open { opacity: 1; transform: none; pointer-events: auto; }
+.sc-pop-title { width: 100%; padding: 2px 0 6px; border: 0; border-bottom: 1px solid var(--line);
+                background: transparent; color: var(--fg); font-family: inherit; font-size: 18px; font-weight: 600;
+                outline: none; transition: border-color 0.2s; }
+.sc-pop-title:focus { border-color: var(--fg); }
+.sc-pop-row { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12.5px; }
+.sc-pop-row[hidden] { display: none; }
+.sc-field { min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px;
+            background: var(--bg); color: var(--fg); font-family: inherit; font-size: 12.5px; outline: none;
+            transition: border-color 0.15s; }
+.sc-field:focus { border-color: var(--fg); }
+.sc-field:disabled { opacity: 0.45; }
+body.dark .sc-field { color-scheme: dark; }
+.sc-remind .sc-field { flex: 1; }
+.sc-check { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+.sc-dash { color: var(--muted); }
+
+.sc-pop-colors { display: flex; gap: 7px; flex-wrap: wrap; }
+.sc-swatch { --ev: var(--muted); width: 18px; height: 18px; padding: 0; border: 0; border-radius: 50%;
+             background: var(--ev); cursor: pointer;
+             transition: transform 0.3s cubic-bezier(0.34, 1.6, 0.64, 1), box-shadow 0.2s; }
+.sc-swatch.none { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.sc-swatch:hover { transform: scale(1.18); }
+.sc-swatch[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--card), 0 0 0 3.5px var(--ev); transform: scale(1.06); }
+.sc-swatch.none[aria-pressed="true"] { box-shadow: inset 0 0 0 1.5px var(--muted), 0 0 0 2px var(--card), 0 0 0 3.5px var(--fg); }
+
+.sc-pop-note { width: 100%; min-height: 44px; max-height: 160px; padding: 7px 8px; border: 1px solid var(--line);
+               border-radius: 8px; background: var(--bg); color: var(--fg); font-family: inherit; font-size: 12.5px;
+               resize: vertical; outline: none; transition: border-color 0.15s; }
+.sc-pop-note:focus { border-color: var(--fg); }
+.sc-pop-foot { display: flex; justify-content: space-between; gap: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sc-in-next, .sc-in-prev, .sc-ev.born, .sc-ev.landed, .sc-chip.born, .sc-chip.landed,
+  .sc-ink, .sc-chip-ink { animation: none; }
+  .sc-pop, .sc-seg-pill { transition-duration: 0.01ms; }
+}
+
+/* To-dos drawn from the to-do list: dashed, no colour bar, not draggable. */
+.sc-todo { position: absolute; z-index: 1; display: flex; flex-direction: column; gap: 1px;
+           padding: 4px 7px; border-radius: 7px; overflow: hidden; cursor: pointer;
+           border: 1.5px dashed color-mix(in srgb, var(--fg) 35%, transparent);
+           background: color-mix(in srgb, var(--card) 85%, transparent);
+           color: var(--fg); font-size: 12px; line-height: 1.25; transition: border-color 0.15s; }
+.sc-todo:hover, .sc-todo:focus-visible { border-color: var(--fg); outline: none; z-index: 2; }
+.sc-todo.short { flex-direction: row; align-items: center; gap: 6px; padding-top: 0; padding-bottom: 0; }
+.sc-todo.done { opacity: 0.5; }
+.sc-todo.done .sc-ev-title { text-decoration: line-through; }
+.sc-todo-chip { cursor: pointer; background: transparent; box-shadow: none;
+                border: 1px dashed color-mix(in srgb, var(--fg) 30%, transparent); }
+.sc-todo-chip.remember { font-style: italic; }
+.sc-todo-chip.done { opacity: 0.5; text-decoration: line-through; }

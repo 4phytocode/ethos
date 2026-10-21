@@ -1,0 +1,45 @@
+/* The habit tracker page. The grid reuses the journal streak styles
+   (.jr-streak, .jr-cell, ...); only what is specific to habits is here. */
+
+#habit-page { flex-direction: column; padding: 56px 36px 180px; gap: 14px; }
+#habit-page h1 { font-size: 36px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+
+.hb-head { display: flex; align-items: center; gap: 16px; margin-top: 6px; }
+.hb-head h2 { margin: 0; font-size: 18px; font-weight: 700; }
+
+.hb-add-btn { padding: 7px 18px; border: 1px dashed var(--line); border-radius: 8px;
+              background: transparent; color: var(--muted); font-family: inherit; font-size: 13px;
+              cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.hb-add-btn:hover { border-color: var(--fg); color: var(--fg); }
+
+.hb-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 560px; }
+.hb-add[hidden] { display: none; }
+.hb-name { flex: 1 1 240px; min-width: 0; padding: 10px 14px; border: 1px solid var(--line);
+           border-radius: 10px; background: var(--bg); color: var(--fg); font-family: inherit;
+           font-size: 14px; outline: none; transition: box-shadow 0.15s; }
+.hb-name:focus { box-shadow: 0 0 0 1.5px var(--fg); }
+.hb-save { padding: 10px 22px; border: 0; border-radius: 10px; background: var(--fg);
+           color: var(--bg); font-family: inherit; font-size: 13px; font-weight: 600;
+           cursor: pointer; transition: opacity 0.15s; }
+.hb-save:hover { opacity: 0.82; }
+.hb-cancel { padding: 10px 14px; border: 0; background: transparent; color: var(--muted);
+             font-family: inherit; font-size: 13px; cursor: pointer; }
+.hb-cancel:hover { color: var(--fg); }
+
+.hb-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+           gap: 8px; max-width: 560px; }
+.hb-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+           border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+           transition: background 0.18s, border-color 0.18s; }
+.hb-item:hover { border-color: var(--muted); }
+.hb-item-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow-wrap: break-word; }
+.hb-item.done .hb-item-name { color: var(--muted); }
+.hb-streak { flex: none; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.hb-remove { flex: none; width: 26px; height: 26px; border: 0; border-radius: 7px;
+             background: transparent; color: var(--muted); cursor: pointer; opacity: 0;
+             display: flex; align-items: center; justify-content: center;
+             transition: opacity 0.18s, background 0.15s, color 0.15s; }
+.hb-item:hover .hb-remove, .hb-remove:focus-visible { opacity: 1; }
+.hb-remove:hover { background: var(--hover); color: var(--fg); }
+.hb-empty { margin: 0; font-size: 13px; color: var(--muted); }
+.hb-empty[hidden] { display: none; }

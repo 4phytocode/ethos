@@ -1,0 +1,172 @@
+/* The journals view — streak strip, header, toolbar, and the two display
+   styles — plus the single-note editor. */
+
+#journals { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
+
+/* === Streak strip (stands in for the banner image) === */
+.jr-streak { align-self: stretch; max-width: 720px; padding: 14px 16px 12px;
+             border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.jr-streak-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+                  margin-bottom: 10px; }
+.jr-streak-label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+                   text-transform: uppercase; color: var(--muted); }
+.jr-streak-stats { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.jr-streak-body { display: flex; flex-direction: column; gap: 3px; }
+.jr-streak-months { display: flex; gap: 3px; }
+.jr-month { width: 11px; font-size: 9px; line-height: 1; color: var(--muted); white-space: nowrap; }
+.jr-streak-grid { display: flex; gap: 3px; }
+.jr-col { display: flex; flex-direction: column; gap: 3px; }
+
+/* A journalled day is drawn in the foreground colour, so it reads as dark on
+   light mode and light on dark mode without needing a second palette. */
+.jr-cell { width: 11px; height: 11px; border-radius: 3px; background: var(--hover);
+           display: block; transition: background 0.15s; }
+.jr-cell[data-level="1"] { background: color-mix(in srgb, var(--fg) 55%, var(--card)); }
+.jr-cell[data-level="2"] { background: var(--fg); }
+.jr-cell[data-level="future"] { background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+
+.jr-streak-foot { display: flex; justify-content: flex-end; margin-top: 8px; }
+.jr-streak-legend { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--muted); }
+
+/* === Header === */
+.jr-head { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.jr-head h1 { font-size: 32px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
+
+.new-page-btn { align-self: flex-start; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px;
+                background: transparent; color: var(--muted); font-family: inherit; font-size: 13px;
+                cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.new-page-btn:hover { border-color: var(--fg); color: var(--fg); }
+
+/* === Toolbar === */
+.jr-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+              flex-wrap: wrap; margin-top: 4px; }
+.jr-tabs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
+.jr-tab { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border: 0;
+          border-radius: 999px; background: transparent; color: var(--muted);
+          font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
+          transition: background 0.15s, color 0.15s; }
+.jr-tab:hover { background: var(--card); color: var(--fg); }
+.jr-tab.active { background: var(--card); color: var(--fg); font-weight: 600; }
+
+.jr-tools { display: flex; align-items: center; gap: 2px; }
+.jr-tool { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent;
+           color: var(--muted); cursor: pointer; display: flex; align-items: center;
+           justify-content: center; transition: background 0.15s, color 0.15s; }
+.jr-tool:hover { background: var(--card); color: var(--fg); }
+.jr-tool.on { background: var(--fg); color: var(--bg); }
+
+.jr-search { align-self: stretch; max-width: 420px; padding: 9px 14px; border: 1px solid var(--line);
+             border-radius: 10px; background: var(--bg); color: var(--fg); font-family: inherit;
+             font-size: 13px; outline: none; transition: box-shadow 0.15s; }
+.jr-search:focus { box-shadow: 0 0 0 1.5px var(--fg); }
+.jr-search[hidden] { display: none; }
+
+.jr-filterbar { display: flex; flex-wrap: wrap; gap: 8px; }
+.jr-filterbar[hidden] { display: none; }
+.jr-filter-pill { padding: 4px 13px; border: 0; border-radius: 999px; font-family: inherit;
+                  font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; opacity: 0.45;
+                  transition: opacity 0.15s, box-shadow 0.15s; }
+.jr-filter-pill:hover { opacity: 0.75; }
+.jr-filter-pill.on { opacity: 1; box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg); }
+
+/* === Shared === */
+.pages-grid { display: flex; flex-direction: column; gap: 14px; }
+.pages-empty { font-size: 13px; color: var(--muted); }
+.jr-more { font-size: 12px; color: var(--muted); margin: 0; }
+.jr-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.tag-pill { display: inline-block; padding: 2px 10px; border-radius: 999px;
+            font-size: 11px; font-weight: 600; color: #fff; }
+
+.jr-group { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.jr-group-dot { width: 9px; height: 9px; border-radius: 50%; }
+.jr-group-name { font-size: 13px; font-weight: 700; }
+.jr-group-count { font-size: 11px; color: var(--muted); padding: 1px 7px;
+                  border-radius: 999px; background: var(--card); }
+
+/* === Card display === */
+.jr-cards { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
+.page-card { width: 274px; display: flex; flex-direction: column; border: 1px solid var(--line);
+             border-radius: 12px; background: var(--card); cursor: pointer; overflow: hidden;
+             transition: background 0.15s, border-color 0.15s; }
+.page-card:hover { background: var(--hover); border-color: var(--muted); }
+.page-card .name { font-size: 15px; font-weight: 700; margin: 0; padding: 16px 16px 0;
+                   line-height: 1.35; }
+.jr-preview { margin: 8px 0 0; padding: 0 16px 16px; font-size: 13px; line-height: 1.55;
+              color: var(--muted); flex: 1;
+              /* The screenshot clips the preview rather than scrolling it. */
+              display: -webkit-box; -webkit-line-clamp: 6; -webkit-box-orient: vertical;
+              overflow: hidden; }
+.jr-card-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+                padding: 11px 16px; border-top: 1px solid var(--line); background: var(--bg); }
+.jr-card-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+
+/* === Bullet display === */
+.jr-bullets { display: flex; flex-direction: column; }
+.jr-bullet { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+             border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+.jr-bullet:hover { background: var(--card); }
+.jr-dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.jr-bullet-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500;
+                  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.jr-bullet-right { display: flex; align-items: center; gap: 10px; flex: none; }
+.jr-bullet-tags { display: flex; gap: 6px; }
+.jr-bullet .rename-input { flex: 1; }
+
+/* === Calendar display === */
+.jr-cal-nav { display: flex; align-items: center; gap: 10px; }
+.jr-cal-nav[hidden] { display: none; }
+.jr-cal-title { font-size: 14px; font-weight: 600; min-width: 150px; }
+/* Previously borrowed from schedule.css, which no longer exists. */
+.jr-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+          background: transparent; color: var(--fg); cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: border-color 0.15s, background 0.15s; }
+.jr-nav:hover { border-color: var(--fg); background: var(--hover); }
+
+/* The month grid sizes to the column it is given rather than to a fixed width,
+   so a narrow window shrinks the cells instead of pushing the grid sideways.
+   Rows shrink with the viewport too, which is what kept the last week of a
+   long month out of reach before. */
+.jr-cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px;
+          width: 100%; max-width: 980px; align-self: flex-start; }
+.jr-cal-dayname { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center;
+                  padding-bottom: 2px; }
+.jr-cal-cell { min-height: clamp(62px, 11vh, 92px); padding: 6px; border: 1px solid var(--line);
+               border-radius: 9px; background: var(--bg); display: flex; flex-direction: column;
+               gap: 4px; min-width: 0; overflow: hidden; }
+.jr-cal-cell.empty { border: 0; background: transparent; min-height: 0; }
+/* A day with a journal on it is filled in, the same signal the streak uses. */
+.jr-cal-cell.journalled { background: var(--card); border-color: var(--muted); }
+.jr-cal-cell.is-today { box-shadow: inset 0 0 0 1.5px var(--fg); }
+.jr-cal-num { font-size: 11px; font-weight: 600; color: var(--muted); }
+.jr-cal-cell.journalled .jr-cal-num { color: var(--fg); }
+.jr-cal-chip { display: block; width: 100%; text-align: left; padding: 3px 6px; border: 0;
+               border-left: 3px solid var(--muted); border-radius: 4px; background: var(--hover);
+               color: var(--fg); font-family: inherit; font-size: 11px; cursor: pointer;
+               overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+               transition: opacity 0.15s; }
+.jr-cal-chip:hover { opacity: 0.75; }
+.jr-cal-more { font-size: 10px; color: var(--muted); }
+
+/* Right-click context menu */
+.ctx-menu { position: fixed; min-width: 120px; background: var(--card); border: 1px solid var(--line);
+            border-radius: 8px; padding: 4px 0; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+body.dark .ctx-menu { box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+.ctx-menu div { padding: 7px 14px; font-size: 13px; cursor: pointer; }
+.ctx-menu div:hover { background: var(--hover); }
+
+/* Rename inline input */
+.rename-input { padding: 4px 10px; border: 1px solid var(--fg); border-radius: 6px; font-size: 13px;
+                font-family: inherit; background: var(--bg); color: var(--fg); outline: none; width: 140px; }
+
+/* === Inside a journal page === */
+#journal-page { flex-direction: column; padding: 72px 48px 48px; }
+.jp-header { display: flex; align-items: center; margin-bottom: 4px; }
+.jp-title { font-size: 26px; font-weight: 700; border: 0; outline: none; background: transparent;
+            color: var(--fg); font-family: inherit; width: 100%; padding: 0; }
+
+/* Inherits the app font rather than pinning Times New Roman, so the writing
+   surface follows whatever Settings > Appearance is set to. */
+#journal-page textarea { flex: 1; width: 100%; border: 0; outline: none; resize: none;
+                         background: transparent; font-family: inherit;
+                         font-size: 20px; line-height: 1.6; color: var(--fg); user-select: text; }

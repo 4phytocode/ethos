@@ -1,0 +1,106 @@
+/* The Notion-style sidebar on the right: section list, the Notes tree, and the
+   hide / show toggle. Its width is --sb-w (base.css); hiding it slides it out
+   on the app spring while the views flow into the space it leaves. */
+
+.sidebar { position: fixed; top: 0; right: 0; bottom: 0; width: 236px; z-index: 20;
+           display: flex; flex-direction: column; gap: 2px;
+           padding: 12px 10px 14px;
+           background: var(--card); border-left: 1px solid var(--line);
+           transition: transform 0.46s cubic-bezier(0.34, 1.2, 0.64, 1),
+                       background 0.25s, border-color 0.25s; }
+body.sb-hidden .sidebar { transform: translateX(104%); }
+
+.sb-top { display: flex; align-items: center; justify-content: space-between;
+          padding: 2px 4px 10px 8px; }
+.sb-name { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
+
+.sb-icon-btn { flex: none; width: 26px; height: 26px; border: 0; border-radius: 6px; padding: 0;
+               background: transparent; color: var(--muted); cursor: pointer;
+               display: flex; align-items: center; justify-content: center;
+               transition: background 0.15s, color 0.15s; }
+.sb-icon-btn:hover, .sb-icon-btn:focus-visible { background: var(--hover); color: var(--fg); }
+
+/* === Section buttons === */
+.sb-nav { display: flex; flex-direction: column; gap: 1px; }
+.sidebar-btn { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px;
+               padding: 0 10px; border: 0; border-radius: 7px;
+               background: transparent; color: var(--muted);
+               font-family: inherit; font-size: 13.5px; font-weight: 500; text-align: left;
+               cursor: pointer; white-space: nowrap;
+               transition: background 0.15s, color 0.15s,
+                           padding-left 0.36s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.sidebar-btn svg { flex: none; }
+.sidebar-btn:hover, .sidebar-btn:focus-visible { background: var(--hover); color: var(--fg); padding-left: 13px; }
+.sidebar-btn.active { background: var(--hover); color: var(--fg); font-weight: 600; }
+.sidebar-glyph { line-height: 0; display: flex; }
+
+/* === Notes tree === */
+.sb-section { display: flex; flex-direction: column; min-height: 0; flex: 1; margin-top: 18px; }
+.sb-section-head { display: flex; align-items: center; gap: 2px; padding: 0 2px 4px 0; }
+.sb-section-title { flex: 1; padding: 4px 10px; border: 0; border-radius: 6px; background: transparent;
+                    color: var(--muted); font-family: inherit; font-size: 11.5px; font-weight: 600;
+                    letter-spacing: 0.04em; text-transform: uppercase; text-align: left; cursor: pointer;
+                    transition: background 0.15s, color 0.15s; }
+.sb-section-title:hover { background: var(--hover); color: var(--fg); }
+body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
+
+.sb-tree { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+
+.sb-row { position: relative; display: flex; align-items: center; height: 30px; border-radius: 6px;
+          padding-left: calc(var(--depth, 0) * 16px); transition: background 0.15s; }
+.sb-row:hover { background: var(--hover); }
+.sb-row.active { background: var(--hover); }
+.sb-row.active .sb-row-main { color: var(--fg); font-weight: 600; }
+.sb-row-main { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 7px;
+               padding: 0 6px 0 10px; border: 0; background: transparent; color: var(--muted);
+               font-family: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.sb-row-main:hover { color: var(--fg); }
+.sb-row-main svg { flex: none; }
+.sb-row-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.sb-caret { display: flex; margin-left: -4px; transition: transform 0.36s cubic-bezier(0.34, 1.4, 0.64, 1); }
+.sb-folder.open > .sb-row .sb-caret { transform: rotate(90deg); }
+
+/* The row tools only appear on hover or keyboard focus, as in Notion. */
+.sb-row-tool { flex: none; width: 22px; height: 22px; margin-right: 3px; padding: 0; border: 0; border-radius: 5px;
+               background: transparent; color: var(--muted); cursor: pointer;
+               display: flex; align-items: center; justify-content: center;
+               opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s; }
+.sb-row:hover .sb-row-tool, .sb-row:has(:focus-visible) .sb-row-tool { opacity: 1; }
+.sb-row-tool:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); color: var(--fg); }
+
+/* Folder contents open on grid rows, which can animate where height:auto cannot. */
+.sb-kids { display: grid; grid-template-rows: 0fr;
+           transition: grid-template-rows 0.4s cubic-bezier(0.34, 1.15, 0.64, 1); }
+.sb-folder.open > .sb-kids { grid-template-rows: 1fr; }
+.sb-kids-inner { overflow: hidden; min-height: 0; display: flex; flex-direction: column; gap: 1px; }
+
+.sb-empty { padding-left: calc(var(--depth, 0) * 16px + 12px); font-size: 12px; color: var(--muted);
+            opacity: 0.7; }
+.sb-empty:hover { background: transparent; }
+.sb-sub { margin: 10px 0 2px; padding: 0 10px; font-size: 11px; color: var(--muted); opacity: 0.8; }
+
+.sb-rename { flex: 1; min-width: 0; height: 24px; margin: 0 6px; padding: 0 6px;
+             border: 1px solid var(--fg); border-radius: 5px; background: var(--bg); color: var(--fg);
+             font-family: inherit; font-size: 13px; outline: none; }
+.sb-row > svg { flex: none; margin-left: 10px; color: var(--muted); }
+
+.sb-foot { padding-top: 8px; border-top: 1px solid var(--line); }
+
+/* === Show button, while hidden === */
+.sb-show { position: fixed; top: 12px; right: 12px; z-index: 21; width: 32px; height: 32px;
+           border: 1px solid var(--line); border-radius: 8px; padding: 0;
+           background: var(--card); color: var(--muted); cursor: pointer;
+           display: flex; align-items: center; justify-content: center;
+           opacity: 0; transform: translateX(14px) scale(0.85); pointer-events: none;
+           transition: opacity 0.2s ease, transform 0.44s cubic-bezier(0.34, 1.4, 0.64, 1),
+                       color 0.15s, border-color 0.15s; }
+body.sb-hidden .sb-show { opacity: 1; transform: none; pointer-events: auto; transition-delay: 0.12s; }
+.sb-show:hover { color: var(--fg); border-color: var(--fg); }
+
+/* The views' back arrows sit top right; keep them clear of the show button. */
+body.sb-hidden .back { right: 52px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar, .sidebar-btn, .sb-caret, .sb-kids, .sb-show, .view { transition-duration: 0.01ms; }
+}

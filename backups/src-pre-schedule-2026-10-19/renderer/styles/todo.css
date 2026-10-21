@@ -1,0 +1,99 @@
+/* The to-do page, and the tick box shared with the habit page and the
+   homepage card. */
+
+#todo-page { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
+#todo-page h1 { font-size: 36px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+
+/* === Tick box ===
+   Empty it is an outlined square. Done, it fills solid with the foreground
+   colour, so a finished item reads as dark on a light page and light on a dark
+   page. This is the same signal the contribution grids use. */
+.tick { flex: none; width: 20px; height: 20px; padding: 0; border: 1.5px solid var(--muted);
+        border-radius: 5px; background: transparent; color: var(--bg); cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        transition: background 0.22s ease, border-color 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.42, 0.64, 1); }
+.tick:hover { border-color: var(--fg); transform: scale(1.06); }
+.tick svg { width: 12px; height: 12px; opacity: 0; transform: scale(0.5);
+            transition: opacity 0.18s ease, transform 0.3s cubic-bezier(0.34, 1.42, 0.64, 1); }
+.tick[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); }
+.tick[aria-pressed="true"] svg { opacity: 1; transform: scale(1); }
+
+/* === Date toolbar === */
+.td-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.td-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+          background: transparent; color: var(--fg); cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: border-color 0.15s, background 0.15s; }
+.td-nav:hover { border-color: var(--fg); background: var(--hover); }
+.td-date { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+           background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
+           outline: none; transition: box-shadow 0.15s; }
+.td-date:focus { box-shadow: 0 0 0 1.5px var(--fg); }
+.td-today { padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px;
+            background: transparent; color: var(--muted); font-family: inherit; font-size: 12px;
+            cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.td-today:hover { border-color: var(--fg); color: var(--fg); }
+.td-heading { margin: 0; font-size: 15px; font-weight: 600; color: var(--muted); }
+.td-heading .is-today { color: var(--fg); }
+
+/* === Add form === */
+.td-add { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; max-width: 680px; }
+.td-title { flex: 1 1 260px; min-width: 0; padding: 10px 14px; border: 1px solid var(--line);
+            border-radius: 10px; background: var(--bg); color: var(--fg); font-family: inherit;
+            font-size: 14px; outline: none; transition: box-shadow 0.15s; }
+.td-title:focus, .td-est input:focus { box-shadow: 0 0 0 1.5px var(--fg); }
+.td-est { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.td-est input { width: 74px; padding: 10px 10px; border: 1px solid var(--line); border-radius: 10px;
+                background: var(--bg); color: var(--fg); font-family: inherit; font-size: 14px;
+                outline: none; transition: box-shadow 0.15s; }
+.td-add-btn { padding: 10px 22px; border: 0; border-radius: 10px; background: var(--fg);
+              color: var(--bg); font-family: inherit; font-size: 13px; font-weight: 600;
+              cursor: pointer; transition: opacity 0.15s; }
+.td-add-btn:hover { opacity: 0.82; }
+
+/* === Summary and list === */
+.td-summary { font-size: 13px; color: var(--muted); min-height: 18px; }
+.td-summary strong { color: var(--fg); font-weight: 600; }
+.td-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
+           gap: 8px; max-width: 680px; }
+.td-item { display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+           border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+           transition: background 0.18s, border-color 0.18s, opacity 0.25s; }
+.td-item:hover { border-color: var(--muted); }
+.td-item.done { opacity: 0.55; }
+.td-item.done .td-item-title { text-decoration: line-through; }
+.td-item.overdue { border-color: #f59e0b; }
+.td-item-body { flex: 1; min-width: 0; }
+.td-item-title { font-size: 14px; font-weight: 600; overflow-wrap: break-word; }
+.td-item-meta { margin-top: 3px; font-size: 12px; color: var(--muted);
+                font-variant-numeric: tabular-nums; }
+.td-item-meta .td-finish { color: var(--fg); font-weight: 600; }
+.td-item-tools { display: flex; align-items: center; gap: 2px; opacity: 0;
+                 transition: opacity 0.18s ease; }
+.td-item:hover .td-item-tools, .td-item:focus-within .td-item-tools { opacity: 1; }
+.td-tool { width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent;
+           color: var(--muted); cursor: pointer; display: flex; align-items: center;
+           justify-content: center; transition: background 0.15s, color 0.15s; }
+.td-tool:hover { background: var(--hover); color: var(--fg); }
+.td-tool[disabled] { opacity: 0.25; pointer-events: none; }
+.td-empty { font-size: 13px; color: var(--muted); }
+
+/* === Blockers === */
+.td-blockers { margin-top: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.td-blockers-btn { padding: 8px 20px; border: 1px dashed var(--line); border-radius: 8px;
+                   background: transparent; color: var(--muted); font-family: inherit;
+                   font-size: 13px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+.td-blockers-btn:hover { border-color: var(--fg); color: var(--fg); }
+.td-blockers-note { margin: 0; font-size: 11px; color: var(--muted); letter-spacing: 0.02em; }
+
+/* === Homepage card rows === */
+.todo-card-item { display: flex; align-items: center; gap: 12px; padding: 7px 2px; }
+.todo-card-item .name { flex: 1; min-width: 0; font-size: 14px; overflow: hidden;
+                        text-overflow: ellipsis; white-space: nowrap; }
+.todo-card-item.done .name { text-decoration: line-through; color: var(--muted); }
+.todo-card-item .when { flex: none; font-size: 12px; color: var(--muted);
+                        font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tick, .tick svg, .td-item { transition-duration: 0.01ms; }
+}

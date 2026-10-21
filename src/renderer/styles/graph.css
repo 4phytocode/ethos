@@ -1,0 +1,57 @@
+/* The graph view: a full-bleed canvas with a small floating panel. The canvas
+   draws itself (js/graph.js) and reads its colours from --fg / --muted / --bg. */
+
+#graph-page { padding: 0; overflow: hidden; }
+
+.gr-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+             cursor: grab; touch-action: none; outline: none; }
+.gr-canvas.over-node { cursor: pointer; }
+.gr-canvas.grabbing { cursor: grabbing; }
+
+.gr-panel { position: absolute; top: 60px; left: 28px; width: 264px; padding: 14px;
+            display: flex; flex-direction: column; gap: 10px;
+            border: 1px solid var(--line); border-radius: 14px;
+            background: color-mix(in srgb, var(--bg) 82%, transparent);
+            backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+            animation: gr-panel-in 0.5s cubic-bezier(0.34, 1.4, 0.64, 1); }
+@keyframes gr-panel-in { from { opacity: 0; transform: translateY(-6px) scale(0.98); } }
+
+.gr-head { display: flex; align-items: center; justify-content: space-between; }
+.gr-title { margin: 0; font-size: 18px; font-weight: 700; letter-spacing: -0.01em; }
+.gr-close { width: 26px; height: 26px; display: grid; place-items: center; padding: 0;
+            border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer;
+            transition: background 0.15s, color 0.15s; }
+.gr-close:hover { background: var(--hover); color: var(--fg); }
+.gr-stats { margin: -4px 0 0; font-size: 11.5px; color: var(--muted); }
+
+.gr-search { height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+             background: var(--bg); color: var(--fg); font-family: inherit; font-size: 12.5px; outline: none;
+             transition: border-color 0.15s; }
+.gr-search:focus { border-color: var(--fg); }
+body.dark .gr-search { color-scheme: dark; }
+
+.gr-toggles { display: flex; flex-wrap: wrap; gap: 6px; }
+.gr-chip { height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px;
+           background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer;
+           transition: border-color 0.15s, color 0.15s, background 0.15s, transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1); }
+.gr-chip:hover { border-color: var(--fg); color: var(--fg); transform: translateY(-1px); }
+.gr-chip[aria-pressed="true"] { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.gr-fit { align-self: flex-start; }
+
+.gr-empty { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); margin: 0;
+            max-width: 320px; text-align: center; font-size: 13px; color: var(--muted); }
+.gr-hint { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); margin: 0; font-size: 11px; color: var(--muted); white-space: nowrap;
+           pointer-events: none; }
+
+/* The sidebar's graph toggle, while the graph is open. */
+.sb-icon-btn.on { background: var(--hover); color: var(--fg); }
+
+@media (max-width: 700px) {
+  .gr-panel { left: 12px; right: 12px; width: auto; }
+  .gr-hint { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gr-panel { animation: none; }
+  .gr-chip { transition: none; }
+}
