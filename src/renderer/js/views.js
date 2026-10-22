@@ -41,6 +41,12 @@ export function onEnter(viewId, fn) { hooks.enter[viewId] = fn; }
 export function current() { return document.body.dataset.view; }
 
 export function show(name) {
+  // A view that belongs to the full edition goes Home in the demo, however it was
+  // reached (sidebar, link, or a stale shortcut).
+  if (document.body.dataset.edition === 'demo') {
+    const target = document.getElementById(name);
+    if (target && target.hasAttribute('data-full-only')) name = 'home';
+  }
   const was = document.body.dataset.view;
   for (const key in viewEls) {
     const wasActive = viewEls[key].classList.contains('active');

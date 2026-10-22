@@ -35,6 +35,12 @@ folder grid (6.7), clock restyle (6.2), two-window to-do page (6.4), settings
 tabs (6.9), vertical banner and sliding highlight (5.3, 7.4), the window-title
 journal name (5.1).
 
+Demo edition (phase 8): src/main/edition.js (default demo; ETHOS_EDITION
+overrides in an unpackaged run only). state:load carries edition, version and
+packaged. Full-only systems (Mood log, its card, Blockers) carry data-full-only:
+hidden in the demo and refused by views.show(). The window title is Ethos (demo).
+UI 68/68 (the test runs as full and checks the demo gate on the page).
+
 Component kit (phase 4): styles/retro.css (buttons and fields default to bevels;
 window, menu, group, tabs, progress, dither, dialog), js/icons.js (54 pixel
 icons, copied into the module from icons/*.svg, MIT), js/dialog.js

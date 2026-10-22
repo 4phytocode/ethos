@@ -6,8 +6,9 @@
 // carries the main-process stack, which is detail a renderer has no business
 // seeing. Validation failures are reported as a plain message instead.
 
-const { ipcMain } = require('electron');
+const { app, ipcMain } = require('electron');
 const { ValidationError, TAG_COLORS, MINUTES_IN_DAY } = require('./schema');
+const { EDITION } = require('./edition');
 
 // `onRendererReady` is called each time the page asks for its initial state,
 // which is the first moment it can be relied on to be listening. The reminder
@@ -18,7 +19,8 @@ function register(store, { onRendererReady } = {}) {
     // Full state, for the renderer's cache on startup.
     'state:load': () => {
       if (onRendererReady) onRendererReady();
-      return { ...store.snapshot(), tagColors: TAG_COLORS, minutesInDay: MINUTES_IN_DAY };
+      return { ...store.snapshot(), tagColors: TAG_COLORS, minutesInDay: MINUTES_IN_DAY,
+               edition: EDITION, version: app.getVersion(), packaged: app.isPackaged };
     },
 
     'notes:create': () => ({ note: store.createNote(), ...store.snapshot() }),

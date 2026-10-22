@@ -48,6 +48,8 @@ async function main() {
   // process reports, and the journals list draws from the loaded notes.
   try {
     await state.load();
+    document.body.dataset.edition = state.editionName();
+    document.title = state.editionName() === 'demo' ? 'Ethos (demo)' : 'Ethos';
   } catch (err) {
     notify.show({
       title: 'Could not open your vault',

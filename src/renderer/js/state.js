@@ -9,6 +9,15 @@ const listeners = new Set();
 
 let cache = { notes: [], tags: [], events: [], todos: [], habits: [], folders: [], pages: [], moods: [] };
 let tagColors = [];
+// Set by main on load. The renderer is untrusted, so this only decides what the
+// page shows (see src/main/edition.js).
+let edition = 'demo';
+let appVersion = '';
+let packaged = false;
+
+export function editionName() { return edition; }
+export function version() { return appVersion; }
+export function isPackaged() { return packaged; }
 
 export function notes() { return cache.notes; }
 export function tags() { return cache.tags; }
@@ -67,6 +76,9 @@ function apply(res) {
 export async function load() {
   const res = await window.ethos.loadState();
   tagColors = res.tagColors || [];
+  edition = res.edition === 'full' ? 'full' : 'demo';
+  appVersion = typeof res.version === 'string' ? res.version : '';
+  packaged = res.packaged === true;
   return apply(res);
 }
 

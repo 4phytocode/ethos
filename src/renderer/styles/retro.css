@@ -227,6 +227,12 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
 .dlg-buttons button.primary { box-shadow: var(--bevel-out), 0 0 0 1px var(--fg); }
 .dlg-buttons button.danger { color: var(--danger); }
 
+/* ---- editions (src/main/edition.js) ---------------------------------------- */
+
+/* Systems that belong to the full edition are not drawn in the demo. The page
+   hides them, and views.js refuses to open them, so no shortcut reaches them. */
+body[data-edition="demo"] [data-full-only] { display: none !important; }
+
 /* ---- motion (PLAN-retro-demo.md, phase 7) --------------------------------- */
 
 /* Buttons press in and spring back: the bevel flips on press (above), and the

@@ -16,6 +16,9 @@ const path = require('path');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ethos-ui-'));
 app.setPath('userData', tmp);
+// The main checks run as the full edition, so the Mood log and Blockers are
+// there to test. The edition section switches to the demo on the page.
+process.env.ETHOS_EDITION = 'full';
 require('../src/main/index.js');
 
 const NUDGE_WAIT_MS = 11500;   // the test nudge delay (10s) plus slack
@@ -247,6 +250,20 @@ async function run() {
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Alpha').click()`);
   check('deleting a note removes the links to it',
     await until(`document.getElementById('nt-title').value === 'Alpha' && !document.querySelector('#nt-links-out .nt-link-open')`));
+
+  console.log('\nedition');
+  check('the full edition shows the Mood log', await js(`document.body.dataset.edition === 'full' && !!document.querySelector('[data-view="mood-page"]').offsetParent`));
+  await js(`document.body.dataset.edition = 'demo'`);
+  check('the demo hides the Mood log button', await js(`getComputedStyle(document.querySelector('[data-view="mood-page"]')).display === 'none'`));
+  check('the demo hides the Blockers placeholder', await js(`getComputedStyle(document.querySelector('.td-blockers')).display === 'none'`));
+  check('the demo hides the homepage mood card', await js(`getComputedStyle(document.getElementById('mood-card')).display === 'none'`));
+  // A click on a hidden button still runs its handler, so this is the real path.
+  await js(`document.querySelector('[data-view="todo-page"]').click()`);
+  await until(`document.body.dataset.view === 'todo-page'`);
+  await js(`document.querySelector('[data-view="mood-page"]').click()`);
+  check('going to the Mood log in the demo lands on Home', await until(`document.body.dataset.view === 'home'`));
+  await js(`document.body.dataset.edition = 'full'`);
+  check('the edition can be put back to full', await js(`document.body.dataset.edition === 'full'`));
 
   console.log('\nsound');
   await js(`document.querySelector('[data-view="settings-page"]').click()`);
