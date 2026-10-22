@@ -640,4 +640,4 @@ Both use `%APPDATA%\Ethos`. Testing the installer therefore touches the real vau
 Measured 114 MB installer and 337 MB unpacked, against the 80-95 MB estimate in Efficiencies.md. Most of it is the Electron runtime. The backgrounds (16 MB in asar) and WebP (Efficiencies Storage step 2) are the next step.
 
 ### 12.10 `npm audit` reports issues after the electron-builder install (security, open)
-Not reviewed in this pass. Run `npm audit` and decide what to act on before the demo ships.
+Checked 2026-10-23: 8 moderate severity findings, appeared after the electron-builder install. I did not check which of them, if any, reach the shipped app. Review them with `npm audit` before the demo ships; do not run `npm audit fix --force` blindly, since it can change Electron.
