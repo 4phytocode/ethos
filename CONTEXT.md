@@ -367,9 +367,9 @@ with `python -I scripts/build-icons.py` whenever the artwork changes. It writes:
 - `assets/tray-16.png` and `tray-16@2x.png`: the tray icon (`tray.js` loads the
   file; Electron picks the @2x copy on high-DPI screens). At 16px the artwork is
   cropped to its middle before it is shrunk.
-- `src/renderer/img/logo-64/128/512.png`: the in-app brand mark (`#brand-logo`)
-  and the launch intro (`#intro-logo`). The page can only load files under
-  `src/renderer`, so these are copies, not links into `assets/`.
+- `src/renderer/img/logo-64/128/512.png`: page copies of the logo (the page can
+  only load files under `src/renderer`). Unused since 2026-10-23: the brand mark
+  and the intro went back to the "•e" drawn as SVG.
 
 `assets/` sits **outside `src/renderer`** on purpose: the `app://` handler only
 serves files inside `src/renderer`, so `assets/` is never reachable from the
@@ -381,8 +381,11 @@ handed to the packager as the executable icon (`win.icon` in the electron-builde
 config, once it is added).
 
 The launch intro (`js/intro.js`, `styles/intro.css`) is a short boot sequence on
-black: three status lines, then the logo flickers in and moves into the brand
-mark. A key press or a click skips it. Reduced motion skips it.
+black (three status lines), then the big "e" with a ring drawn round it, which
+shrinks into the "•e" brand mark at the top left (an inline SVG in
+`index.html`, coloured by `--fg`). The boot text is hidden in the same frame the
+e appears (one class, `.e-in`), so the two never share the screen. About 3.65s.
+A key press or a click skips it. Reduced motion skips it.
 
 ## 4. The four layers, and the rule for each
 
@@ -920,7 +923,7 @@ worth doing before a paid release.
 | Retro look: "98" light, the ethos website's palette in dark, square corners, bevels not shadows | user's call, 2026-10-22: "more retro, more vintage and more boxy", like the ethos website. Plan in PLAN-retro-demo.md |
 | One pixel face for headings (Pixelify Sans) | user's call, 2026-10-23: a pixel face that reads in upper and lower case. Silkscreen (caps only) and VT323 were dropped |
 | Plex Mono stays the body font | readability over long text; the pixel face is for headings, labels and buttons |
-| The launch intro is a boot sequence, not the ring | the retro brief; a short skippable boot screen, then the logo moves into the brand mark |
+| The launch intro is a boot sequence, then the e and ring | user's call, 2026-10-23: keep the boot text and bring back the e with the spinning ring; the boot text goes the moment the e appears. The brand mark is the small "•e" again, not the logo PNG |
 | Dark theme is the ethos website's palette | user's answer, 2026-10-23: "just like the ethos website". The site lives in `H:\ethos web\` |
 | Headings use one pixel face, Pixelify Sans | user's answer, 2026-10-23: upper and lower case, a general-purpose face. Silkscreen and VT323 dropped |
 | Typing sounds are synthesised and off by default | no audio files, no CSP change; a sound out of nowhere in a work app is a bad first impression |
@@ -1090,7 +1093,8 @@ rest; section 6 there records what was done and what was left).
   them; Settings > Sound has On/Off and a volume. The editors carry
   `data-typing-sound`.
 - **Logo and intro.** `scripts/build-icons.py` makes every size from
-  `imgs/new logo [1].png`. The launch is a boot sequence (section 3).
+  `imgs/new logo [1].png` (app, installer, tray). The launch is a boot sequence,
+  then the e and ring; the in-app mark is the "•e" SVG (section 3).
 - **Demo edition** (`src/main/edition.js`). Default `demo`. `ETHOS_EDITION` overrides
   it only in an unpackaged run (the test harness uses `full`). `state:load` reports
   `edition`, `version` and `packaged`. Systems marked `data-full-only` (the Mood

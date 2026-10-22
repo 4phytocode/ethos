@@ -3,6 +3,14 @@
 Short log, newest first. Details live in CONTEXT.md (what and why) and bugs.md
 (what is broken). Read those two before opening source files.
 
+## 2026-10-23 (late): intro is boot text, then the e and ring
+User's call. The boot lines stay; after them the original big e returns with
+its ring drawn round it, and shrinks into the small "•e" mark at the top left
+(the logo PNG is no longer on the page). The boot text is hidden in the same
+frame the e appears, so it no longer hangs over the page. About 3.65s, still
+skippable. `test:ui` waits 4.2s for it. Checks 84/84, UI 68/68 (one
+unexplained failure in nine runs, not reproduced).
+
 ## 2026-10-23 (later): light mode readability, pixel MS Sans Serif headings
 User feedback before launch. Light mode: secondary text is black (was #404040),
 the accent is a deep teal and the title bars a pale green with black text (the

@@ -7,8 +7,8 @@ Source: imgs/new logo [1].png (800x800, RGBA). Outputs:
   assets/icon.png        512x512, Electron icon on other platforms
   assets/tray-16.png     tray icon, plus tray-16@2x.png (Electron picks the @2x
                          file on high-DPI screens)
-  src/renderer/img/      logo-64, logo-128, logo-512 for the page (brand, intro,
-                         About). The page can only load files under src/renderer.
+  src/renderer/img/      logo-64, logo-128, logo-512: page copies, unused since
+                         2026-10-23 (the page draws the "e" mark as SVG).
 
 At 16px the disc's orbit and the thin bracket turn to noise, so the 16px frame
 is cropped to the middle of the artwork before it is shrunk.

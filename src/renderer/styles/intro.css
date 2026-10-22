@@ -1,31 +1,49 @@
-/* Launch intro: a boot sequence on black, then the logo moves into the brand mark. */
+/* Launch intro: boot text on black, then the big e with a ring drawn behind it
+   and then in front of it, and the e shrinks into the brand mark. */
 
 .brand.intro-hidden { opacity: 0; }
 
-#intro { position: fixed; inset: 0; z-index: 1000; background: #05070b;
-         color: #d4e6ff; transition: background 0.7s ease; }
+#intro { position: fixed; inset: 0; z-index: 1000; background: #000000; color: #d4e6ff;
+         transition: background 0.8s ease; }
 #intro.reveal { background: transparent; }
 
 #intro-boot { position: absolute; left: 10vw; top: 12vh; margin: 0;
               font: 15px/1.8 var(--font-ui, ui-monospace, Consolas, monospace); white-space: pre; }
 #intro-boot p { margin: 0; }
 #intro-boot .ok { color: #9fe0b8; }
+/* The boot text goes the moment the e arrives: no fade, so the two never share
+   the screen. */
+#intro.e-in #intro-boot { display: none; }
 
-#intro-logo { position: absolute; left: 50%; top: 50%; width: 160px; height: 160px;
-              transform: translate(-50%, -50%); opacity: 0;
-              transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1); }
-#intro.logo-in #intro-logo { animation: intro-logo-in 0.24s steps(1, end) 1 both; }
+#intro .ring { position: absolute; left: 50%; top: 50%; width: 460px; height: 460px;
+               transform: translate(-50%, -50%); overflow: visible; transition: opacity 0.4s ease; }
+#intro.rings-out .ring { opacity: 0; }
+#intro .ring path { fill: none; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1;
+                    stroke-width: 3; }
+/* Both layers draw the same path with the same timing, so the loop is one unbroken ink-like stroke:
+   a quick confident sweep that settles softly at the end. */
+#intro .ring.back { z-index: 1; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.12)); }
+#intro .ring.front { z-index: 3; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.35)); }
+#intro.e-in .ring path { animation: ring-draw 0.9s cubic-bezier(0.65, 0, 0.25, 1) 0.3s forwards; }
+/* The half of the loop that passes behind the e reads as the far side, so it sits back in shadow. */
+#intro .ring.back path { stroke: #6e6e6e; }
+#intro .ring.front path { stroke: #ffffff; }
+@keyframes ring-draw { to { stroke-dashoffset: 0; } }
 
-/* Two flickers on the way in, like a screen warming up, then steady. */
-@keyframes intro-logo-in {
-  0%   { opacity: 0; }
-  30%  { opacity: 1; }
-  45%  { opacity: 0.2; }
-  65%  { opacity: 1; }
-  100% { opacity: 1; }
-}
+#intro-e { position: absolute; left: calc(50% - 191px); top: calc(50% - 120px); width: 400px; height: 240px;
+           z-index: 2; overflow: visible; transform-origin: 0 0; opacity: 0; }
+#intro.e-in #intro-e { opacity: 1; }
+#intro.e-in #intro-e text { transform-box: fill-box; transform-origin: center;
+                            animation: intro-e-in 0.4s ease-out both; }
+@keyframes intro-e-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
-@media (prefers-reduced-motion: reduce) {
-  #intro-logo { transition: none; }
-  #intro.logo-in #intro-logo { animation: none; opacity: 1; }
+/* The dot blinks once the e has landed back in the brand mark: four flashes over 1s,
+   with each gap between them a little longer than the last, so it settles rather than stops. */
+#brand-logo.dot-blink circle { animation: brand-dot-blink 1s steps(1, end) 1; }
+@keyframes brand-dot-blink {
+  0% { opacity: 0; }  7% { opacity: 1; }
+ 19% { opacity: 0; } 26% { opacity: 1; }
+ 44% { opacity: 0; } 51% { opacity: 1; }
+ 75% { opacity: 0; } 82% { opacity: 1; }
+100% { opacity: 1; }
 }

@@ -29,15 +29,36 @@
   <!-- Faint scanlines over the dark theme; on or off in Settings > Background. -->
   <div id="crt" aria-hidden="true"></div>
 
-  <!-- Launch intro: boot text, then the logo moves into the brand mark; see js/intro.js -->
+  <!-- Launch intro: boot text, then the big e with a ring drawn round it, which
+       shrinks into the brand mark; see js/intro.js -->
   <div id="intro" aria-hidden="true">
     <div id="intro-boot"></div>
-    <img id="intro-logo" src="img/logo-512.png" alt="">
+    <!-- One full ring behind the e; an identical copy in front, clipped to its near (lower) half -->
+    <svg class="ring back" viewBox="0 0 460 460">
+      <g transform="rotate(-18 230 230)">
+        <path pathLength="1" d="M20 230 A210 58 0 0 1 440 230 A210 58 0 0 1 20 230"/>
+      </g>
+    </svg>
+    <!-- Same 40x24 box as the brand mark, drawn 10x larger so it can shrink straight into it -->
+    <svg id="intro-e" viewBox="0 0 40 24" fill="#ffffff">
+      <text x="13" y="20" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700">e</text>
+    </svg>
+    <svg class="ring front" viewBox="0 0 460 460">
+      <defs>
+        <clipPath id="ring-front-clip"><rect x="0" y="230" width="460" height="230"/></clipPath>
+      </defs>
+      <g transform="rotate(-18 230 230)">
+        <path pathLength="1" clip-path="url(#ring-front-clip)" d="M20 230 A210 58 0 0 1 440 230 A210 58 0 0 1 20 230"/>
+      </g>
+    </svg>
   </div>
 
   <!-- Brand -->
   <div class="brand intro-hidden" id="brand-home">
-    <img id="brand-logo" src="img/logo-128.png" width="26" height="26" alt="">
+    <svg id="brand-logo" viewBox="0 0 40 24" width="40" height="24" aria-hidden="true">
+      <circle cx="5" cy="14" r="3" fill="currentColor"/>
+      <text x="13" y="20" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700" fill="currentColor">e</text>
+    </svg>
   </div>
 
   <!-- Right sidebar: Notion-style, full names, hideable (Ctrl+\) -->

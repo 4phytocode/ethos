@@ -40,7 +40,7 @@ async function run() {
     if (e.level === 'error') errors.push(e.message);
   });
   if (win.webContents.isLoading()) await new Promise(r => win.webContents.once('did-finish-load', r));
-  await wait(3500); // intro animation + state load
+  await wait(4200); // intro animation (3.65s) + state load
   const js = (code) => win.webContents.executeJavaScript(code);
   const shot = async (name) => fs.writeFileSync(path.join(tmp, name), (await win.webContents.capturePage()).toPNG());
   const nudgeShown = () => js(`(() => { const n = document.getElementById('jp-nudge'); return !n.hidden && n.offsetParent !== null; })()`);
