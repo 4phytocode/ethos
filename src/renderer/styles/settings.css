@@ -5,7 +5,7 @@
 .set-intro { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 
 .set-section { max-width: 760px; padding: 20px 22px; border: 1px solid var(--line);
-               border-radius: 14px; background: var(--card); margin-bottom: 16px; }
+               border-radius: var(--radius); background: var(--card); margin-bottom: 16px; }
 .set-section h2 { margin: 0; font-size: 16px; font-weight: 700; }
 .set-section-sub { margin: 4px 0 18px; font-size: 12px; color: var(--muted); }
 
@@ -18,9 +18,9 @@
 .set-hint { font-size: 12px; color: var(--muted); }
 
 /* Segmented control */
-.set-seg-group { display: flex; gap: 3px; padding: 3px; border-radius: 999px;
+.set-seg-group { display: flex; gap: 3px; padding: 3px; border-radius: var(--radius);
                  background: var(--bg); flex: none; }
-.set-seg { padding: 6px 18px; border: 0; border-radius: 999px; background: transparent;
+.set-seg { padding: 6px 18px; border: 0; border-radius: var(--radius); background: transparent;
            color: var(--muted); font-family: inherit; font-size: 13px; font-weight: 600;
            cursor: pointer; transition: background 0.18s, color 0.18s; }
 .set-seg:hover { color: var(--fg); }
@@ -29,7 +29,7 @@
 /* Font chooser */
 .set-fonts { display: grid; grid-template-columns: repeat(auto-fill, minmax(188px, 1fr)); gap: 10px; }
 .set-font { position: relative; display: flex; flex-direction: column; gap: 5px; align-items: flex-start;
-            padding: 13px 15px; border: 1px solid var(--line); border-radius: 11px;
+            padding: 13px 15px; border: 1px solid var(--line); border-radius: var(--radius);
             background: var(--bg); color: var(--fg); cursor: pointer; text-align: left;
             transition: border-color 0.18s, background 0.18s, transform 0.18s; }
 .set-font:hover { border-color: var(--muted); transform: translateY(-1px); }
@@ -41,12 +41,12 @@
 .set-font-note { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
                  font-size: 11px; color: var(--muted); line-height: 1.35; }
 .set-font-missing { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
-                    font-size: 10px; font-weight: 600; color: #f59e0b; }
+                    font-size: 10px; font-weight: 600; color: var(--warn); }
 .set-font.missing { opacity: 0.72; }
 
 /* Preview */
 .set-preview { margin-top: 16px; padding: 16px 18px; border: 1px dashed var(--line);
-               border-radius: 11px; background: var(--bg); }
+               border-radius: var(--radius); background: var(--bg); }
 .set-preview-label { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
                      font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
                      text-transform: uppercase; color: var(--muted); }

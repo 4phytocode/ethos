@@ -22,6 +22,9 @@ export const FONTS = [
   // Shipped in renderer/fonts (see styles/fonts.css), so it needs no probe.
   { id: 'plex-mono', label: 'IBM Plex Mono', note: 'Calm, even-spaced and precise',
     stack: "'IBM Plex Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace", probe: null },
+  // The pixel face. Shipped in renderer/fonts; it reads in upper and lower case.
+  { id: 'pixelify', label: 'Pixelify Sans', note: 'Pixel, upper and lower case',
+    stack: "'Pixelify Sans', 'IBM Plex Mono', ui-monospace, monospace", probe: null },
   { id: 'system', label: 'System UI', note: 'Matches the rest of your desktop',
     stack: "system-ui, 'Segoe UI', Roboto, sans-serif", probe: null },
 ];

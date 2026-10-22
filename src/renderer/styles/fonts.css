@@ -10,6 +10,11 @@
              src: url('../fonts/IBMPlexMono-Bold.ttf') format('truetype'); }
 @font-face { font-family: 'IBM Plex Mono'; font-style: italic; font-weight: 400; font-display: swap;
              src: url('../fonts/IBMPlexMono-Italic.ttf') format('truetype'); }
+/* The pixel face for headings, window titles and buttons (--font-display). A
+   variable font, so one file covers every weight. Upper and lower case both
+   work, which is why it was chosen over Silkscreen (PLAN-retro-demo.md, 0a). */
+@font-face { font-family: 'Pixelify Sans'; font-style: normal; font-weight: 400 700; font-display: swap;
+             src: url('../fonts/PixelifySans.ttf') format('truetype'); }
 
 /* Tuning for IBM Plex Mono. A monospace face is wider and heavier than a UI
    sans at the same size, so on its own it reads dense. These soften it:

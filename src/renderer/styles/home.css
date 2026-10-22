@@ -4,9 +4,9 @@
 /* Cards on the homepage share one look, slightly lifted so they read as
    surfaces over the backdrop rather than boxes drawn on it. */
 .todo-card, .mood-card, .home-habits {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.04); }
+  box-shadow: none; }
 body.dark .todo-card, body.dark .mood-card, body.dark .home-habits {
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25); }
+  box-shadow: none; }
 
 /* Layout: one two-column grid for the whole page, so every segment shares an
    edge with the ones above and below it.
@@ -36,19 +36,19 @@ body.sb-hidden #home.view.active { justify-content: center; }
 }
 
 /* === Mood check-in === */
-.mood-card { min-width: 0; padding: 16px 18px; border-radius: 10px;
+.mood-card { min-width: 0; padding: 16px 18px; border-radius: var(--radius);
              background: var(--card); border: 1px solid var(--line);
              display: flex; flex-direction: column; gap: 12px; }
 .mood-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .mood-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
-.mood-log-link, .mood-change { padding: 3px 12px; border: 1px solid var(--line); border-radius: 999px;
+.mood-log-link, .mood-change { padding: 3px 12px; border: 1px solid var(--line); border-radius: var(--radius);
   background: transparent; color: var(--muted); font-family: inherit; font-size: 12px;
   cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .mood-log-link:hover, .mood-change:hover { border-color: var(--fg); color: var(--fg); }
 
 .mood-ask { display: flex; flex-direction: column; gap: 10px; }
 .mood-choices { display: flex; gap: 6px; flex-wrap: wrap; }
-.mood-choice { padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px;
+.mood-choice { padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius);
   background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px; cursor: pointer;
   transition: border-color 0.15s, background 0.15s, color 0.15s, transform 0.25s cubic-bezier(0.34, 1.4, 0.64, 1); }
 .mood-choice:hover { border-color: var(--muted); transform: translateY(-1px); }
@@ -56,10 +56,10 @@ body.sb-hidden #home.view.active { justify-content: center; }
 
 .mood-form { display: flex; gap: 8px; align-items: flex-end; }
 .mood-text { flex: 1; min-width: 0; resize: none; padding: 8px 10px; border: 1px solid var(--line);
-  border-radius: 8px; background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
+  border-radius: var(--radius); background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
   line-height: 1.45; outline: none; user-select: text; }
 .mood-text:focus { box-shadow: 0 0 0 1.5px var(--fg); }
-.mood-done { padding: 8px 16px; border: 0; border-radius: 8px; background: var(--fg); color: var(--bg);
+.mood-done { padding: 8px 16px; border: 0; border-radius: var(--radius); background: var(--fg); color: var(--bg);
   font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .mood-done:hover { opacity: 0.82; }
 
@@ -68,7 +68,7 @@ body.sb-hidden #home.view.active { justify-content: center; }
 .mood-logged-line b { font-weight: 700; }
 
 /* === Habits segment === */
-.home-habits { min-width: 0; padding: 20px 24px; border-radius: 10px;
+.home-habits { min-width: 0; padding: 20px 24px; border-radius: var(--radius);
                background: var(--card); border: 1px solid var(--line); }
 .home-habits .todo-card-head { margin-bottom: 14px; gap: 12px; }
 .home-habits h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
@@ -77,7 +77,7 @@ body.sb-hidden #home.view.active { justify-content: center; }
 .home-habits-list { list-style: none; margin: 0 0 12px; padding: 0;
                     display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
 .home-habit { display: flex; align-items: center; gap: 12px; padding: 10px 12px;
-              border: 1px solid var(--line); border-radius: 9px; background: var(--bg);
+              border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
               transition: border-color 0.18s, opacity 0.18s; }
 .home-habit:hover { border-color: var(--muted); }
 .home-habit-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow-wrap: anywhere; }
@@ -85,7 +85,7 @@ body.sb-hidden #home.view.active { justify-content: center; }
 .home-habit-streak { flex: none; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
 .home-habits-add input { width: 100%; max-width: 320px; padding: 8px 12px; border: 1px dashed var(--line);
-  border-radius: 9px; background: transparent; color: var(--fg); font-family: inherit; font-size: 13px;
+  border-radius: var(--radius); background: transparent; color: var(--fg); font-family: inherit; font-size: 13px;
   outline: none; transition: border-color 0.15s; }
 .home-habits-add input:focus { border-style: solid; border-color: var(--fg); }
 
@@ -96,40 +96,40 @@ body.sb-hidden #home.view.active { justify-content: center; }
 .mood-list { list-style: none; margin: 0; padding: 0; max-width: 680px;
              display: flex; flex-direction: column; gap: 6px; }
 .mood-row { display: grid; grid-template-columns: 170px 90px 1fr; gap: 14px; align-items: baseline;
-            padding: 11px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--card); }
+            padding: 11px 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
 .mood-row-date { font-size: 13px; font-weight: 600; }
 .mood-row-feel { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; }
-.mood-row-feel[data-feeling="good"] { color: #16a34a; }
-.mood-row-feel[data-feeling="bad"] { color: #dc2626; }
+.mood-row-feel[data-feeling="good"] { color: var(--ok); }
+.mood-row-feel[data-feeling="bad"] { color: var(--danger); }
 .mood-row-feel[data-feeling="note"] { color: var(--muted); }
 .mood-row-text { font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; user-select: text; }
 .mood-row.empty { background: transparent; border-style: dashed; }
 .mood-row.empty .mood-row-text { color: var(--muted); font-style: italic; }
 .mood-more { align-self: flex-start; margin-top: 8px; padding: 6px 14px; border: 1px solid var(--line);
-  border-radius: 8px; background: transparent; color: var(--muted); font-family: inherit; font-size: 13px; cursor: pointer; }
+  border-radius: var(--radius); background: transparent; color: var(--muted); font-family: inherit; font-size: 13px; cursor: pointer; }
 .mood-more:hover { border-color: var(--fg); color: var(--fg); }
 
 /* Settings > Background */
 .set-swatches { display: flex; flex-wrap: wrap; gap: 8px; }
 .set-swatch { display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg);
   font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.15s; }
 .set-swatch:hover { border-color: var(--muted); }
 .set-swatch.on { border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
-.set-swatch i { width: 22px; height: 22px; border-radius: 50%;
+.set-swatch i { width: 22px; height: 22px; border-radius: var(--radius);
   background: conic-gradient(var(--sw-a, var(--bd-a)), var(--sw-b, var(--bd-b)), var(--sw-c, var(--bd-c)), var(--sw-a, var(--bd-a))); }
 .set-bg-custom { display: flex; gap: 14px; flex-wrap: wrap; }
 .set-bg-custom label { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
 .set-bg-custom input { width: 34px; height: 26px; padding: 0; border: 1px solid var(--line);
-  border-radius: 6px; background: none; cursor: pointer; }
+  border-radius: var(--radius); background: none; cursor: pointer; }
 
-.set-bg-remove { align-self: flex-start; padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px;
+.set-bg-remove { align-self: flex-start; padding: 5px 14px; border: 1px solid var(--line); border-radius: var(--radius);
   background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer;
   transition: border-color 0.15s, color 0.15s; }
-.set-bg-remove:hover { border-color: #ef4444; color: #ef4444; }
+.set-bg-remove:hover { border-color: var(--danger); color: var(--danger); }
 .set-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
 .set-tile { position: relative; aspect-ratio: 16 / 10; padding: 0; overflow: hidden;
-  border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--fg);
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--fg);
   font-family: inherit; cursor: pointer; transition: transform 0.2s cubic-bezier(0.34, 1.4, 0.64, 1), border-color 0.15s; }
 .set-tile:hover { transform: translateY(-2px); border-color: var(--muted); }
 .set-tile.on { border-color: var(--fg); box-shadow: 0 0 0 2px var(--fg); }
@@ -138,7 +138,7 @@ body.sb-hidden #home.view.active { justify-content: center; }
   font-size: 11px; font-weight: 600; text-align: left; color: #fff;
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.6)); }
 .set-tile:not(:has(img)) span { inset: 0; display: flex; align-items: center; justify-content: center;
-  padding: 0; color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: 10px; }
+  padding: 0; color: var(--muted); background: none; border: 1px dashed var(--line); border-radius: var(--radius); }
 
 @media (prefers-reduced-motion: reduce) {
   .mood-choice { transition-duration: 0.01ms; }

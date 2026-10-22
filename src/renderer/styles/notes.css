@@ -6,7 +6,7 @@
 .nt-home { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 16px; }
 .nt-home h1 { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
 .nt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.nt-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: 8px;
+.nt-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius);
           background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; cursor: pointer;
           transition: border-color 0.15s, transform 0.3s cubic-bezier(0.34, 1.5, 0.64, 1); }
 .nt-btn:hover { border-color: var(--fg); transform: translateY(-1px); }
@@ -15,7 +15,7 @@
 .nt-recent { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
 .nt-none { margin: 0; color: var(--muted); font-size: 13px; }
 .nt-card { display: flex; flex-direction: column; gap: 6px; min-height: 110px; padding: 14px;
-           border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--fg);
+           border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--fg);
            font-family: inherit; text-align: left; cursor: pointer;
            transition: border-color 0.15s, transform 0.36s cubic-bezier(0.34, 1.5, 0.64, 1); }
 .nt-card:hover { border-color: var(--fg); transform: translateY(-2px); }
@@ -28,18 +28,18 @@
 .nt-doc.nt-enter { animation: nt-enter 0.42s cubic-bezier(0.34, 1.3, 0.64, 1); }
 @keyframes nt-enter { from { opacity: 0; transform: translateY(8px); } }
 .nt-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 18px; }
-.nt-crumb { padding: 3px 8px; margin-left: -8px; border: 0; border-radius: 6px; background: transparent;
+.nt-crumb { padding: 3px 8px; margin-left: -8px; border: 0; border-radius: var(--radius); background: transparent;
             color: var(--muted); font-family: inherit; font-size: 12.5px; cursor: pointer; transition: background 0.15s, color 0.15s; }
 .nt-crumb:hover { background: var(--hover); color: var(--fg); }
 .nt-bar-tools { display: flex; align-items: center; gap: 6px; }
-.nt-move { height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg);
+.nt-move { height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
            color: var(--fg); font-family: inherit; font-size: 12px; outline: none; }
 body.dark .nt-move { color-scheme: dark; }
-.nt-chip { height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent;
+.nt-chip { height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent;
            color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .nt-chip:hover { border-color: var(--fg); color: var(--fg); }
 .nt-chip[aria-pressed="true"] { border-style: dashed; color: var(--fg); }
-.nt-danger:hover { border-color: #ef4444; color: #ef4444; }
+.nt-danger:hover { border-color: var(--danger); color: var(--danger); }
 
 .nt-title { width: 100%; padding: 0; border: 0; background: transparent; color: var(--fg); font-family: inherit;
             font-size: 34px; font-weight: 700; letter-spacing: -0.02em; outline: none; }
@@ -57,7 +57,7 @@ body.dark .nt-move { color-scheme: dark; }
 .nt-links-chips { display: contents; }
 .nt-links-none { font-size: 12px; color: var(--muted); }
 .nt-link-chip { display: inline-flex; align-items: center; height: 26px; border: 1px solid var(--line);
-                border-radius: 999px; overflow: hidden; animation: nt-chip-in 0.36s cubic-bezier(0.34, 1.5, 0.64, 1);
+                border-radius: var(--radius); overflow: hidden; animation: nt-chip-in 0.36s cubic-bezier(0.34, 1.5, 0.64, 1);
                 transition: border-color 0.15s; }
 .nt-link-chip:hover { border-color: var(--fg); }
 @keyframes nt-chip-in { from { opacity: 0; transform: scale(0.85); } }
@@ -66,21 +66,21 @@ body.dark .nt-move { color-scheme: dark; }
                 font-family: inherit; font-size: 12px; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nt-link-x { height: 100%; padding: 0 8px 0 2px; border: 0; background: transparent; color: var(--muted);
              font-family: inherit; font-size: 14px; line-height: 1; cursor: pointer; }
-.nt-link-x:hover { color: #ef4444; }
+.nt-link-x:hover { color: var(--danger); }
 .nt-link-wrap { position: relative; }
-.nt-link-add { height: 26px; padding: 0 10px; border: 1px dashed var(--line); border-radius: 999px; background: transparent;
+.nt-link-add { height: 26px; padding: 0 10px; border: 1px dashed var(--line); border-radius: var(--radius); background: transparent;
                color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .nt-link-add:hover, .nt-link-add[aria-expanded="true"] { border-color: var(--fg); color: var(--fg); }
 .nt-picker { position: absolute; top: 32px; left: 0; z-index: 20; width: 280px; padding: 6px;
-             border: 1px solid var(--line); border-radius: 12px; background: var(--bg);
-             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.14); transform-origin: top left;
+             border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+             box-shadow: none; transform-origin: top left;
              animation: nt-picker-in 0.3s cubic-bezier(0.34, 1.4, 0.64, 1); }
 @keyframes nt-picker-in { from { opacity: 0; transform: translateY(-4px) scale(0.97); } }
 .nt-picker-input { width: 100%; height: 30px; padding: 0 8px; border: 0; border-bottom: 1px solid var(--line);
                    background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; outline: none; }
 .nt-picker-list { list-style: none; margin: 4px 0 0; padding: 0; max-height: 260px; overflow-y: auto; }
 .nt-pick { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 7px 8px;
-           border-radius: 7px; cursor: pointer; font-size: 13px; }
+           border-radius: var(--radius); cursor: pointer; font-size: 13px; }
 .nt-pick.active, .nt-pick:hover { background: var(--hover); }
 .nt-pick-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .nt-pick-meta { flex-shrink: 0; font-size: 11px; color: var(--muted); }

@@ -8,10 +8,55 @@
 * { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg) 26%, transparent) transparent; }
 
 
-:root { --bg: #ffffff; --fg: #000000; --muted: #6b6b6b; --line: #e0e0e0;
-        --card: #f5f5f5; --hover: #ebebeb; }
-body.dark { --bg: #0a0a0a; --fg: #ffffff; --muted: #9a9a9a; --line: #222222;
-            --card: #141414; --hover: #1e1e1e; }
+/* Two themes. Light is "98": grey faces, white fields, a navy accent. Dark is
+   the ethos website's palette (ethos web/site/assets/ethos.css). Components use
+   these names only; nothing outside this block writes a colour that a theme
+   should own. Square corners everywhere (--radius), and depth from bevels, not
+   blurred shadows. See PLAN-retro-demo.md section 0a. */
+:root {
+  --bg: #c0c0c0;        /* page and window face */
+  --face: #c0c0c0;      /* bars, buttons, sidebar */
+  --field: #ffffff;     /* inputs, editors, lists */
+  --fg: #000000;
+  --muted: #404040;     /* readable on --bg and --field */
+  --line: #808080;      /* 1px borders */
+  --card: #ffffff;
+  --hover: #dcdcdc;
+  --accent: #000080;    /* selection, title bars, the one accent */
+  --accent-2: #1084d0;  /* far end of the title-bar gradient only */
+  --accent-fg: #ffffff;
+  --danger: #e81123;    /* destructive actions only */
+  --ok: #008000;
+  --warn: #8a5a00;      /* overdue, attention; readable on white */
+  --desktop: #008080;
+  --hi: #ffffff; --hi-2: #dfdfdf; --lo: #808080; --lo-2: #000000;
+  --bevel-out: inset -1px -1px var(--lo-2), inset 1px 1px var(--hi),
+               inset -2px -2px var(--lo), inset 2px 2px var(--hi-2);
+  --bevel-in:  inset -1px -1px var(--hi), inset 1px 1px var(--lo-2),
+               inset -2px -2px var(--hi-2), inset 2px 2px var(--lo);
+  --bevel-field: inset -1px -1px var(--hi), inset 1px 1px var(--lo),
+                 inset -2px -2px var(--hi-2), inset 2px 2px var(--lo-2);
+  --title-bg: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --radius: 0;
+  --glow: none;
+  --font-display: 'Pixelify Sans', var(--font-ui, system-ui), sans-serif;
+}
+body.dark {
+  --bg: #05070b; --face: #0e1116; --field: #05070b;
+  --fg: #d4e6ff; --muted: #8fa6c6; --line: #20262f;
+  --card: #0e1116; --hover: #161a21;
+  --accent: #d4e6ff; --accent-2: #8fa6c6; --accent-fg: #05070b;
+  --danger: #ff7a7a; --ok: #9fe0b8; --warn: #ffb054; --desktop: #05070b;
+  --hi: rgba(212, 230, 255, .2); --hi-2: rgba(212, 230, 255, .06);
+  --lo: #000000; --lo-2: #000000;
+  --bevel-out: inset 1px 1px 0 var(--hi), inset -1px -1px 0 #000,
+               inset 2px 2px 0 var(--hi-2), inset -2px -2px 0 rgba(0, 0, 0, .5);
+  --bevel-in:  inset 1px 1px 0 #000, inset -1px -1px 0 var(--hi),
+               inset 2px 2px 0 rgba(0, 0, 0, .5), inset -2px -2px 0 var(--hi-2);
+  --bevel-field: inset 0 0 0 1px var(--line);
+  --title-bg: linear-gradient(90deg, #262d38, #0d1015 85%);
+  --glow: 0 0 6px rgba(212, 230, 255, .35);
+}
 
 * { box-sizing: border-box; }
 /* A class that sets display (flex, grid) otherwise beats the hidden attribute's
@@ -24,6 +69,16 @@ html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); }
 body { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
        transition: background 0.25s, color 0.25s;
        overflow: hidden; user-select: none; }
+
+/* Headings use the pixel face. Body text, inputs and the journal editor keep
+   the --font-ui family the user chose in Settings. */
+h1, h2, h3 { font-family: var(--font-display); }
+/* Pixel glyphs sit on a grid; any tracking other than 0 shears the edges. */
+h1, h2, h3 { letter-spacing: 0; }
+
+/* Keyboard focus is the 98 dotted rectangle, drawn inside the control. */
+:focus-visible { outline: 1px dotted var(--fg); outline-offset: -3px; }
+::selection { background: var(--accent); color: var(--accent-fg); }
 
 /* === Brand, top left === */
 /* The logo is fixed, so a scrolling view slides underneath it. Without a
@@ -71,12 +126,12 @@ body.sb-hidden { --sb-w: 0px; }
 .home-clock { display: flex; align-items: center; justify-content: flex-start; }
 
 .todo-card { flex: 1 1 460px; min-width: 340px; max-width: 680px; min-height: 340px;
-             padding: 24px 28px; border-radius: 10px; display: flex; flex-direction: column;
+             padding: 24px 28px; border-radius: var(--radius); display: flex; flex-direction: column;
              background: var(--card); border: 1px solid var(--line); }
 .todo-card-head { display: flex; align-items: center; justify-content: space-between;
                   margin-bottom: 18px; }
 .todo-card h2 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
-.todo-card-open { padding: 5px 14px; border: 1px solid var(--line); border-radius: 999px;
+.todo-card-open { padding: 5px 14px; border: 1px solid var(--line); border-radius: var(--radius);
                   background: transparent; color: var(--muted); font-family: inherit;
                   font-size: 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .todo-card-open:hover { border-color: var(--fg); color: var(--fg); }
@@ -113,13 +168,13 @@ body.sb-hidden { --sb-w: 0px; }
 #toggle { position: fixed; bottom: 20px; left: 24px; z-index: 10;
           display: flex; align-items: center; gap: 4px;
           width: 40px; height: 40px; padding: 4px;
-          border-radius: 999px; background: var(--card); overflow: hidden;
+          border-radius: var(--radius); background: var(--card); overflow: hidden;
           /* Slight overshoot on the way open is what reads as "fluid" rather
              than merely "animated"; colour and shadow settle on a plain ease. */
           transition: width 0.44s cubic-bezier(0.34, 1.4, 0.64, 1),
                       box-shadow 0.3s ease, background 0.25s ease; }
-#toggle:hover, #toggle:has(:focus-visible) { width: 92px; box-shadow: 0 2px 14px rgba(0, 0, 0, 0.1); }
-body.dark #toggle:hover, body.dark #toggle:has(:focus-visible) { box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45); }
+#toggle:hover, #toggle:has(:focus-visible) { width: 92px; box-shadow: none; }
+body.dark #toggle:hover, body.dark #toggle:has(:focus-visible) { box-shadow: none; }
 
 /* The cover itself: centred on the collapsed dock, spun away as it opens. */
 .toggle-cover { position: absolute; left: 0; top: 0; width: 40px; height: 40px;
@@ -130,7 +185,7 @@ body.dark #toggle:hover, body.dark #toggle:has(:focus-visible) { box-shadow: 0 2
 #toggle:hover .toggle-cover, #toggle:has(:focus-visible) .toggle-cover {
   opacity: 0; transform: scale(0.55) rotate(-100deg); }
 
-#toggle button { flex: none; width: 40px; height: 32px; border: 0; border-radius: 999px;
+#toggle button { flex: none; width: 40px; height: 32px; border: 0; border-radius: var(--radius);
                  cursor: pointer; display: flex; align-items: center; justify-content: center;
                  background: transparent; color: var(--muted);
                  opacity: 0; transform: translateX(-10px) scale(0.8); pointer-events: none;

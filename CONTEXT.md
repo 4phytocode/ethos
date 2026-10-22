@@ -288,7 +288,8 @@ body        font-family: var(--font-ui, system-ui, sans-serif)
 ```
 
 Everything else inherits, including buttons, inputs and the journal editor, so
-a new surface needs no font rule of its own. **Do not pin a family anywhere.**
+a new surface needs no font rule of its own. **Never write a family name in a component rule.** Families come from tokens only:
+`--font-ui` (body, set by Settings), `--font-display` (headings, the pixel face).
 The journal editor used to hard-code Times New Roman and was the one place the
 setting could not reach.
 
@@ -301,7 +302,7 @@ setting would be lying. `settings.js` measures each candidate against a
 deliberately absent family and marks any that are missing, rather than letting
 a fallback masquerade as the chosen face.
 
-**Two choices: IBM Plex Mono (default, `FONTS[0]`) and System UI.** Plex Mono is the first
+**Three choices: IBM Plex Mono (default, `FONTS[0]`), Pixelify Sans and System UI.** Plex Mono is the first
 *shipped* face: five TTFs in `renderer/fonts/` (OFL 1.1, see its README),
 declared in `styles/fonts.css`, so it needs no `probe`. `applyFont()` also sets
 `html[data-font]`, and `fonts.css` uses it to tune the mono face (lighter
@@ -311,6 +312,30 @@ relies on an installed font.
 
 Stored preferences that name a removed font fall back to System UI, because
 `load()` only accepts ids that are still in `FONTS`.
+
+### Themes and tokens (retro redesign, 2026-10-23)
+
+Colours, borders and fonts come from custom properties on `:root` (light) and
+`body.dark` (dark) at the top of `styles/base.css`. Components use the names;
+they never write a colour that a theme should own.
+
+- **Light is "98":** grey page and window faces (`--bg`, `--face`), white fields
+  (`--field`, `--card`), 1px grey borders (`--line`), a navy accent (`--accent`).
+- **Dark is the ethos website's palette** (tube black, phosphor blue-white), taken
+  from `H:\ethos web\site\assets\ethos.css`.
+- **Square corners.** `--radius` is 0. The round clock face is the one exception.
+- **Depth from bevels, not shadows.** `--bevel-out`, `--bevel-in` and
+  `--bevel-field` are inset shadows. Blurred outer shadows and
+  `backdrop-filter` were removed: panels are opaque. Focus rings and selected
+  outlines (`0 0 0 1.5px`) remain.
+- **Status colours** are tokens too: `--danger`, `--ok`, `--warn`. Event colours
+  stay on the tag palette (`TAG_COLORS`).
+- **Fonts:** `--font-ui` (Plex Mono, body), `--font-display` (Pixelify Sans,
+  headings). Pixelify Sans is the pixel face because it reads in upper and lower
+  case; Silkscreen and VT323 were considered and dropped (PLAN-retro-demo.md, 0a).
+- Keyboard focus is a 1px dotted outline inside the control (`base.css`).
+
+The full plan and the user's answers are in `PLAN-retro-demo.md`.
 
 ### The app icon and the logo
 
@@ -876,6 +901,10 @@ worth doing before a paid release.
 | Note links stored by id on the page (`links`), not as `[[Title]]` text | a title in the text breaks on rename; an id cannot. Same rule as tags (§5) |
 | The graph only reads the model; links are made in the note | one place that writes links; the graph stays a picture |
 | Graph drawn on a canvas with a hand-written force layout | no library under the CSP; a few hundred nodes stay cheap; springs match the schedule's feel |
+| Retro look: "98" light, the ethos website's palette in dark, square corners, bevels not shadows | user's call, 2026-10-22: "more retro, more vintage and more boxy", like the ethos website. Plan in PLAN-retro-demo.md |
+| One pixel face for headings (Pixelify Sans) | user's call, 2026-10-23: a pixel face that reads in upper and lower case. Silkscreen (caps only) and VT323 were dropped |
+| Plex Mono stays the body font | readability over long text; the pixel face is for headings, labels and buttons |
+| The launch intro is a boot sequence, not the ring | the retro brief; a short skippable boot screen, then the logo moves into the brand mark |
 
 ---
 

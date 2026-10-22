@@ -5,7 +5,7 @@
 
 /* === Streak strip (stands in for the banner image) === */
 .jr-streak { align-self: stretch; max-width: 720px; padding: 14px 16px 12px;
-             border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+             border: 1px solid var(--line); border-radius: var(--radius); background: var(--card); }
 .jr-streak-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
                   margin-bottom: 10px; }
 .jr-streak-label { font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
@@ -19,7 +19,7 @@
 
 /* A journalled day is drawn in the foreground colour, so it reads as dark on
    light mode and light on dark mode without needing a second palette. */
-.jr-cell { width: 11px; height: 11px; border-radius: 3px; background: var(--hover);
+.jr-cell { width: 11px; height: 11px; border-radius: var(--radius); background: var(--hover);
            display: block; transition: background 0.15s; }
 .jr-cell[data-level="1"] { background: color-mix(in srgb, var(--fg) 55%, var(--card)); }
 .jr-cell[data-level="2"] { background: var(--fg); }
@@ -32,7 +32,7 @@
 .jr-head { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .jr-head h1 { font-size: 32px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
 
-.new-page-btn { align-self: flex-start; padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px;
+.new-page-btn { align-self: flex-start; padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius);
                 background: transparent; color: var(--muted); font-family: inherit; font-size: 13px;
                 cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .new-page-btn:hover { border-color: var(--fg); color: var(--fg); }
@@ -42,28 +42,28 @@
               flex-wrap: wrap; margin-top: 4px; }
 .jr-tabs { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; }
 .jr-tab { display: flex; align-items: center; gap: 7px; padding: 7px 14px; border: 0;
-          border-radius: 999px; background: transparent; color: var(--muted);
+          border-radius: var(--radius); background: transparent; color: var(--muted);
           font-family: inherit; font-size: 13px; font-weight: 500; cursor: pointer;
           transition: background 0.15s, color 0.15s; }
 .jr-tab:hover { background: var(--card); color: var(--fg); }
 .jr-tab.active { background: var(--card); color: var(--fg); font-weight: 600; }
 
 .jr-tools { display: flex; align-items: center; gap: 2px; }
-.jr-tool { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent;
+.jr-tool { width: 32px; height: 32px; border: 0; border-radius: var(--radius); background: transparent;
            color: var(--muted); cursor: pointer; display: flex; align-items: center;
            justify-content: center; transition: background 0.15s, color 0.15s; }
 .jr-tool:hover { background: var(--card); color: var(--fg); }
 .jr-tool.on { background: var(--fg); color: var(--bg); }
 
 .jr-search { align-self: stretch; max-width: 420px; padding: 9px 14px; border: 1px solid var(--line);
-             border-radius: 10px; background: var(--bg); color: var(--fg); font-family: inherit;
+             border-radius: var(--radius); background: var(--bg); color: var(--fg); font-family: inherit;
              font-size: 13px; outline: none; transition: box-shadow 0.15s; }
 .jr-search:focus { box-shadow: 0 0 0 1.5px var(--fg); }
 .jr-search[hidden] { display: none; }
 
 .jr-filterbar { display: flex; flex-wrap: wrap; gap: 8px; }
 .jr-filterbar[hidden] { display: none; }
-.jr-filter-pill { padding: 4px 13px; border: 0; border-radius: 999px; font-family: inherit;
+.jr-filter-pill { padding: 4px 13px; border: 0; border-radius: var(--radius); font-family: inherit;
                   font-size: 12px; font-weight: 600; color: #fff; cursor: pointer; opacity: 0.45;
                   transition: opacity 0.15s, box-shadow 0.15s; }
 .jr-filter-pill:hover { opacity: 0.75; }
@@ -74,19 +74,19 @@
 .pages-empty { font-size: 13px; color: var(--muted); }
 .jr-more { font-size: 12px; color: var(--muted); margin: 0; }
 .jr-date { font-size: 12px; color: var(--muted); white-space: nowrap; }
-.tag-pill { display: inline-block; padding: 2px 10px; border-radius: 999px;
+.tag-pill { display: inline-block; padding: 2px 10px; border-radius: var(--radius);
             font-size: 11px; font-weight: 600; color: #fff; }
 
 .jr-group { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
-.jr-group-dot { width: 9px; height: 9px; border-radius: 50%; }
+.jr-group-dot { width: 9px; height: 9px; border-radius: var(--radius); }
 .jr-group-name { font-size: 13px; font-weight: 700; }
 .jr-group-count { font-size: 11px; color: var(--muted); padding: 1px 7px;
-                  border-radius: 999px; background: var(--card); }
+                  border-radius: var(--radius); background: var(--card); }
 
 /* === Card display === */
 .jr-cards { display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-start; }
 .page-card { width: 274px; display: flex; flex-direction: column; border: 1px solid var(--line);
-             border-radius: 12px; background: var(--card); cursor: pointer; overflow: hidden;
+             border-radius: var(--radius); background: var(--card); cursor: pointer; overflow: hidden;
              transition: background 0.15s, border-color 0.15s; }
 .page-card:hover { background: var(--hover); border-color: var(--muted); }
 .page-card .name { font-size: 15px; font-weight: 700; margin: 0; padding: 16px 16px 0;
@@ -103,9 +103,9 @@
 /* === Bullet display === */
 .jr-bullets { display: flex; flex-direction: column; }
 .jr-bullet { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
-             border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+             border-radius: var(--radius); cursor: pointer; transition: background 0.15s; }
 .jr-bullet:hover { background: var(--card); }
-.jr-dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--muted); }
+.jr-dot { flex: none; width: 5px; height: 5px; border-radius: var(--radius); background: var(--muted); }
 .jr-bullet-name { flex: 1; min-width: 0; font-size: 14px; font-weight: 500;
                   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .jr-bullet-right { display: flex; align-items: center; gap: 10px; flex: none; }
@@ -117,7 +117,7 @@
 .jr-cal-nav[hidden] { display: none; }
 .jr-cal-title { font-size: 14px; font-weight: 600; min-width: 150px; }
 /* Previously borrowed from schedule.css, which no longer exists. */
-.jr-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+.jr-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius);
           background: transparent; color: var(--fg); cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           transition: border-color 0.15s, background 0.15s; }
@@ -132,7 +132,7 @@
 .jr-cal-dayname { font-size: 11px; font-weight: 600; color: var(--muted); text-align: center;
                   padding-bottom: 2px; }
 .jr-cal-cell { min-height: clamp(62px, 11vh, 92px); padding: 6px; border: 1px solid var(--line);
-               border-radius: 9px; background: var(--bg); display: flex; flex-direction: column;
+               border-radius: var(--radius); background: var(--bg); display: flex; flex-direction: column;
                gap: 4px; min-width: 0; overflow: hidden; }
 .jr-cal-cell.empty { border: 0; background: transparent; min-height: 0; }
 /* A day with a journal on it is filled in, the same signal the streak uses. */
@@ -141,7 +141,7 @@
 .jr-cal-num { font-size: 11px; font-weight: 600; color: var(--muted); }
 .jr-cal-cell.journalled .jr-cal-num { color: var(--fg); }
 .jr-cal-chip { display: block; width: 100%; text-align: left; padding: 3px 6px; border: 0;
-               border-left: 3px solid var(--muted); border-radius: 4px; background: var(--hover);
+               border-left: 3px solid var(--muted); border-radius: var(--radius); background: var(--hover);
                color: var(--fg); font-family: inherit; font-size: 11px; cursor: pointer;
                overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
                transition: opacity 0.15s; }
@@ -150,13 +150,13 @@
 
 /* Right-click context menu */
 .ctx-menu { position: fixed; min-width: 120px; background: var(--card); border: 1px solid var(--line);
-            border-radius: 8px; padding: 4px 0; z-index: 100; box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
-body.dark .ctx-menu { box-shadow: 0 4px 16px rgba(0,0,0,0.5); }
+            border-radius: var(--radius); padding: 4px 0; z-index: 100; box-shadow: none; }
+body.dark .ctx-menu { box-shadow: none; }
 .ctx-menu div { padding: 7px 14px; font-size: 13px; cursor: pointer; }
 .ctx-menu div:hover { background: var(--hover); }
 
 /* Rename inline input */
-.rename-input { padding: 4px 10px; border: 1px solid var(--fg); border-radius: 6px; font-size: 13px;
+.rename-input { padding: 4px 10px; border: 1px solid var(--fg); border-radius: var(--radius); font-size: 13px;
                 font-family: inherit; background: var(--bg); color: var(--fg); outline: none; width: 140px; }
 
 /* === Inside a journal page === */

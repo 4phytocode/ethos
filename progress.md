@@ -18,6 +18,11 @@ src/renderer/img. The tray loads a file now (the drawn icon is gone). The intro
 is a boot sequence, then the logo moves into the brand mark (2.4s, skippable).
 Checks 84/84, UI 55/55.
 
+Tokens and fonts (phase 3): light is 98 grey, dark is the ethos website palette.
+Radii are 0 (except the clock), blurred shadows and backdrop blur are gone, and
+status colours are tokens. Pixelify Sans is the headings face (Silkscreen and
+VT323 dropped). Screenshots of every view in both themes checked by eye.
+
 ## 2026-10-21 (late night): note links and the graph view
 Notes pages link to each other (`page.links`, schema v7, by id; backlinks
 derived). In the note: Links chips, "+ Link note" picker, "Linked from". Graph

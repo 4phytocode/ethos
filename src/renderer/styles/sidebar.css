@@ -14,7 +14,7 @@ body.sb-hidden .sidebar { transform: translateX(104%); }
           padding: 2px 4px 10px 8px; }
 .sb-name { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: 0.02em; }
 
-.sb-icon-btn { flex: none; width: 26px; height: 26px; border: 0; border-radius: 6px; padding: 0;
+.sb-icon-btn { flex: none; width: 26px; height: 26px; border: 0; border-radius: var(--radius); padding: 0;
                background: transparent; color: var(--muted); cursor: pointer;
                display: flex; align-items: center; justify-content: center;
                transition: background 0.15s, color 0.15s; }
@@ -23,7 +23,7 @@ body.sb-hidden .sidebar { transform: translateX(104%); }
 /* === Section buttons === */
 .sb-nav { display: flex; flex-direction: column; gap: 1px; }
 .sidebar-btn { display: flex; align-items: center; gap: 10px; width: 100%; height: 32px;
-               padding: 0 10px; border: 0; border-radius: 7px;
+               padding: 0 10px; border: 0; border-radius: var(--radius);
                background: transparent; color: var(--muted);
                font-family: inherit; font-size: 13.5px; font-weight: 500; text-align: left;
                cursor: pointer; white-space: nowrap;
@@ -37,7 +37,7 @@ body.sb-hidden .sidebar { transform: translateX(104%); }
 /* === Notes tree === */
 .sb-section { display: flex; flex-direction: column; min-height: 0; flex: 1; margin-top: 18px; }
 .sb-section-head { display: flex; align-items: center; gap: 2px; padding: 0 2px 4px 0; }
-.sb-section-title { flex: 1; padding: 4px 10px; border: 0; border-radius: 6px; background: transparent;
+.sb-section-title { flex: 1; padding: 4px 10px; border: 0; border-radius: var(--radius); background: transparent;
                     color: var(--muted); font-family: inherit; font-size: 11.5px; font-weight: 600;
                     letter-spacing: 0.04em; text-transform: uppercase; text-align: left; cursor: pointer;
                     transition: background 0.15s, color 0.15s; }
@@ -46,7 +46,7 @@ body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
 
 .sb-tree { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
 
-.sb-row { position: relative; display: flex; align-items: center; height: 30px; border-radius: 6px;
+.sb-row { position: relative; display: flex; align-items: center; height: 30px; border-radius: var(--radius);
           padding-left: calc(var(--depth, 0) * 16px); transition: background 0.15s; }
 .sb-row:hover { background: var(--hover); }
 .sb-row.active { background: var(--hover); }
@@ -62,7 +62,7 @@ body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
 .sb-folder.open > .sb-row .sb-caret { transform: rotate(90deg); }
 
 /* The row tools only appear on hover or keyboard focus, as in Notion. */
-.sb-row-tool { flex: none; width: 22px; height: 22px; margin-right: 3px; padding: 0; border: 0; border-radius: 5px;
+.sb-row-tool { flex: none; width: 22px; height: 22px; margin-right: 3px; padding: 0; border: 0; border-radius: var(--radius);
                background: transparent; color: var(--muted); cursor: pointer;
                display: flex; align-items: center; justify-content: center;
                opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s; }
@@ -81,7 +81,7 @@ body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
 .sb-sub { margin: 10px 0 2px; padding: 0 10px; font-size: 11px; color: var(--muted); opacity: 0.8; }
 
 .sb-rename { flex: 1; min-width: 0; height: 24px; margin: 0 6px; padding: 0 6px;
-             border: 1px solid var(--fg); border-radius: 5px; background: var(--bg); color: var(--fg);
+             border: 1px solid var(--fg); border-radius: var(--radius); background: var(--bg); color: var(--fg);
              font-family: inherit; font-size: 13px; outline: none; }
 .sb-row > svg { flex: none; margin-left: 10px; color: var(--muted); }
 
@@ -89,7 +89,7 @@ body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
 
 /* === Show button, while hidden === */
 .sb-show { position: fixed; top: 12px; right: 12px; z-index: 21; width: 32px; height: 32px;
-           border: 1px solid var(--line); border-radius: 8px; padding: 0;
+           border: 1px solid var(--line); border-radius: var(--radius); padding: 0;
            background: var(--card); color: var(--muted); cursor: pointer;
            display: flex; align-items: center; justify-content: center;
            opacity: 0; transform: translateX(14px) scale(0.85); pointer-events: none;
