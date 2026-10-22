@@ -13,6 +13,7 @@ import * as state from './state.js';
 import { show, showCtx, onLeave } from './views.js';
 import { setNote, closePanels } from './tags.js';
 import { notify } from './notifications.js';
+import { confirmDialog } from './dialog.js';
 import { initPrompts, startPrompts, stopPrompts } from './prompts.js';
 import { initStreak, journalledDays, todayISO } from './journal-streak.js';
 
@@ -496,6 +497,12 @@ async function newNote() {
 async function remove(noteId) {
   const note = state.note(noteId);
   const title = note ? note.title : 'Journal';
+  // Deleting a journal cannot be undone, so it asks first.
+  const sure = await confirmDialog({
+    title: 'Delete journal', message: 'Delete "' + title + '"? This cannot be undone.',
+    okLabel: 'Delete', danger: true,
+  });
+  if (!sure) return;
   try {
     if (currentNoteId === noteId) currentNoteId = null;
     await state.removeNote(noteId);

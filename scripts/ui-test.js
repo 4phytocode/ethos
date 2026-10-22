@@ -237,6 +237,12 @@ async function run() {
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Beta').click()`);
   await until(`document.getElementById('nt-title').value === 'Beta'`);
   await js(`document.getElementById('nt-delete').click()`);
+  check('deleting a note asks first', await until(`!!document.querySelector('.dlg')`));
+  await js(`document.querySelector('.dlg .dlg-buttons button:not(.primary):not(.danger)').click()`);
+  check('cancel keeps the note', await until(`!document.querySelector('.dlg') && document.getElementById('nt-title').value === 'Beta'`));
+  await js(`document.getElementById('nt-delete').click()`);
+  await until(`!!document.querySelector('.dlg')`);
+  await js(`document.querySelector('.dlg .danger').click()`);
   await until(`![...document.querySelectorAll('#sb-tree .sb-row-label')].some(n => n.textContent === 'Beta')`);
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Alpha').click()`);
   check('deleting a note removes the links to it',

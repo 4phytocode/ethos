@@ -23,6 +23,12 @@ Radii are 0 (except the clock), blurred shadows and backdrop blur are gone, and
 status colours are tokens. Pixelify Sans is the headings face (Silkscreen and
 VT323 dropped). Screenshots of every view in both themes checked by eye.
 
+Component kit (phase 4): styles/retro.css (buttons and fields default to bevels;
+window, menu, group, tabs, progress, dither, dialog), js/icons.js (54 pixel
+icons, copied into the module from icons/*.svg, MIT), js/dialog.js
+(confirmDialog). Note and journal deletes now ask first (Cancel keeps the
+note). Sidebar icons are pixel icons. UI 57/57 (two new checks), checks 84/84.
+
 ## 2026-10-21 (late night): note links and the graph view
 Notes pages link to each other (`page.links`, schema v7, by id; backlinks
 derived). In the note: Links chips, "+ Link note" picker, "Linked from". Graph

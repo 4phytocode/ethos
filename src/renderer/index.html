@@ -5,6 +5,7 @@
 <title>Ethos</title>
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/retro.css">
 <link rel="stylesheet" href="styles/intro.css">
 <link rel="stylesheet" href="styles/journals.css">
 <link rel="stylesheet" href="styles/tags.css">
@@ -47,27 +48,27 @@
     </div>
     <nav class="sb-nav">
       <button class="sidebar-btn" data-view="home" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="home" data-icon-size="16"></span>
         <span>Home</span>
       </button>
       <button class="sidebar-btn" data-view="schedule-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="calendar" data-icon-size="16"></span>
         <span>Schedule</span>
       </button>
       <button class="sidebar-btn" data-view="todo-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12l3 3 5-6"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="checkbox" data-icon-size="16"></span>
         <span>To-do's</span>
       </button>
       <button class="sidebar-btn" data-view="habit-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="chart-bar" data-icon-size="16"></span>
         <span>Habit tracker</span>
       </button>
       <button class="sidebar-btn" data-view="journals" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="book-open" data-icon-size="16"></span>
         <span>Journal</span>
       </button>
       <button class="sidebar-btn" data-view="mood-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5c3-1.3 6.5-1.3 10 1 3.5-2.3 7-2.3 10-1V19c-3-1.3-6.5-1.3-10 1-3.5-2.3-7-2.3-10-1z"/><path d="M12 6.5V20"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="mood-happy" data-icon-size="16"></span>
         <span>Mood log</span>
       </button>
     </nav>
@@ -89,7 +90,7 @@
     </section>
 
     <div class="sb-foot">
-    <button class="sidebar-btn" data-view="settings-page" type="button"><span class="sidebar-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span></button>
+    <button class="sidebar-btn" data-view="settings-page" type="button"><span class="sidebar-glyph" aria-hidden="true" data-icon="sliders" data-icon-size="16"></span><span>Settings</span></button>
     </div>
   </aside>
   <!-- Shown only while the sidebar is hidden -->

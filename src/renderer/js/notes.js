@@ -8,6 +8,7 @@
 import * as state from './state.js';
 import { show, onLeave, current, showCtx } from './views.js';
 import { notify } from './notifications.js';
+import { confirmDialog } from './dialog.js';
 
 const TYPING_SAVE_MS = 400;
 const OPEN_KEY = 'ethos.notes.openFolders';
@@ -117,6 +118,12 @@ async function deleteFolder(id) {
 async function deletePage(id) {
   const page = state.page(id);
   if (!page) return;
+  // Deleting a note cannot be undone, so it asks first.
+  const sure = await confirmDialog({
+    title: 'Delete note', message: 'Delete "' + pageName(page) + '"? This cannot be undone.',
+    okLabel: 'Delete', danger: true,
+  });
+  if (!sure) return;
   if (openPageId === id) { clearTimeout(saveTimer); openPageId = null; }
   try {
     await state.removePage(id);
