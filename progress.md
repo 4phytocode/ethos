@@ -23,6 +23,18 @@ Radii are 0 (except the clock), blurred shadows and backdrop blur are gone, and
 status colours are tokens. Pixelify Sans is the headings face (Silkscreen and
 VT323 dropped). Screenshots of every view in both themes checked by eye.
 
+Component kit (phase 4) and window chrome, toasts, menus, motion and typing
+sounds (phases 5-7). chrome.js gives each view a title bar and a status row;
+the sidebar is a Start menu; the backdrop has pattern presets and optional
+scanlines in dark. Toasts are small windows. The right-click menu is a menu and
+stays on screen (bugs 2.4 fixed). Graph pages are squares. Spring moved to
+js/spring.js. js/sound.js: typing clicks (Web Audio, off by default, a one-time
+offer), with a Settings section. Checks 84/84, UI 62/62.
+Not done in this pass (plan items left open): journal menu bar (6.6), notes
+folder grid (6.7), clock restyle (6.2), two-window to-do page (6.4), settings
+tabs (6.9), vertical banner and sliding highlight (5.3, 7.4), the window-title
+journal name (5.1).
+
 Component kit (phase 4): styles/retro.css (buttons and fields default to bevels;
 window, menu, group, tabs, progress, dither, dialog), js/icons.js (54 pixel
 icons, copied into the module from icons/*.svg, MIT), js/dialog.js

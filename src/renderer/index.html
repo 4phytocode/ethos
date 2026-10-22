@@ -26,6 +26,8 @@
 <body>
   <!-- Moving background, or the user's image; see js/backdrop.js. Behind everything, never clickable. -->
   <div id="backdrop" aria-hidden="true"><div class="bd-image" id="bd-image"></div></div>
+  <!-- Faint scanlines over the dark theme; on or off in Settings > Background. -->
+  <div id="crt" aria-hidden="true"></div>
 
   <!-- Launch intro: boot text, then the logo moves into the brand mark; see js/intro.js -->
   <div id="intro" aria-hidden="true">
@@ -315,7 +317,7 @@
     <div class="tag-panel" id="tag-pick-panel">
       <div class="tag-pick-list" id="tag-pick-list"></div>
     </div>
-    <textarea id="jp-textarea" placeholder="Start writing..."></textarea>
+    <textarea id="jp-textarea" data-typing-sound placeholder="Start writing..."></textarea>
   </section>
 
   <!-- Schedule: draw on the grid to make an event; see js/schedule.js -->
@@ -424,7 +426,7 @@
           <div class="nt-links-chips" id="nt-links-in"></div>
         </div>
       </div>
-      <textarea class="nt-body" id="nt-body" placeholder="Write something..."></textarea>
+      <textarea class="nt-body" id="nt-body" data-typing-sound placeholder="Write something..."></textarea>
     </article>
   </section>
 
@@ -604,6 +606,22 @@
         <div class="set-seg-group" id="set-bg-mode"></div>
       </div>
 
+      <div class="set-row set-bg-patternrow">
+        <div class="set-label">
+          <span>Pattern</span>
+          <span class="set-hint">The desktop behind the windows.</span>
+        </div>
+        <div class="set-seg-group" id="set-bg-pattern"></div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Scanlines</span>
+          <span class="set-hint">Faint lines over the dark theme, like an old monitor.</span>
+        </div>
+        <div class="set-seg-group" id="set-bg-crt"></div>
+      </div>
+
       <div class="set-row">
         <div class="set-label">
           <span>Where</span>
@@ -641,6 +659,26 @@
         <div class="set-tiles" id="set-bg-presets"></div>
         <button class="set-bg-remove" id="set-bg-clear" type="button" hidden>Remove uploaded image</button>
         <input id="set-bg-file" type="file" accept="image/png,image/jpeg,image/webp" hidden/>
+      </div>
+    </section>
+
+    <section class="set-section">
+      <h2>Sound</h2>
+      <p class="set-section-sub">A small click as you write.</p>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Typing sounds</span>
+          <span class="set-hint">In the journal and the Notes pages.</span>
+        </div>
+        <div class="set-seg-group" id="set-sound-typing"></div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Volume</span>
+        </div>
+        <input type="range" id="set-sound-volume" min="0" max="100" step="5" aria-label="Typing sound volume">
       </div>
     </section>
   </section>

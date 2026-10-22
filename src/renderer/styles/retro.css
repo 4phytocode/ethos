@@ -55,14 +55,14 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
   height: 24px;
   padding: 0 3px 0 6px;
   background: var(--title-bg);
-  color: var(--accent-fg);
+  color: var(--title-fg);
   font-family: var(--font-display);
   font-size: 16px;
   line-height: 1;
   user-select: none;
 }
 .win-title-text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-.win-title .px-icon { color: var(--accent-fg); }
+.win-title .px-icon { color: var(--title-fg); }
 
 /* Small square buttons at the right of a title bar. They draw a glyph with text,
    because the 24-unit icon grid is too coarse at 14px. */
@@ -102,6 +102,20 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
   text-overflow: ellipsis;
 }
 .win-status > .grow { flex: 1; }
+
+/* ---- view chrome (js/chrome.js) ------------------------------------------- */
+
+/* Each view's title bar. The brand mark is fixed over the top left, so the
+   title text starts clear of it. */
+.view-titlebar { margin: 0 0 14px; padding-left: 56px; }
+.view-status {
+  margin: 14px 0 56px;   /* clears the theme toggle, fixed at the bottom left */
+  padding: 3px 8px;
+  background: var(--face);
+  box-shadow: var(--bevel-field);
+  color: var(--muted);
+  font-size: 12px;
+}
 
 /* ---- menu: a raised list of rows (Start menu, menu bar drop-downs) --------- */
 
@@ -213,4 +227,22 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
 .dlg-buttons button.primary { box-shadow: var(--bevel-out), 0 0 0 1px var(--fg); }
 .dlg-buttons button.danger { color: var(--danger); }
 
-/* Reduced motion: the kit has no motion of its own yet; phase 7 adds it here. */
+/* ---- motion (PLAN-retro-demo.md, phase 7) --------------------------------- */
+
+/* Buttons press in and spring back: the bevel flips on press (above), and the
+   release overshoots on the app's spring. */
+button { transition: box-shadow 0.06s linear, transform 0.16s cubic-bezier(0.34, 1.4, 0.64, 1); }
+button:active:not(:disabled) { transform: translate(1px, 1px); }
+
+/* A view opens in three steps of opacity, the 98 "window appears" feel. Opacity
+   only: a transform here would re-anchor the fixed popovers inside a view. */
+@keyframes win-open { from { opacity: 0; } to { opacity: 1; } }
+.view.active { animation: win-open 0.12s steps(3, end); }
+
+/* A steady caret in the accent colour, in the editors and anywhere text is typed. */
+textarea { caret-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  button, button:active:not(:disabled) { transition: none; transform: none; }
+  .view.active { animation: none; }
+}

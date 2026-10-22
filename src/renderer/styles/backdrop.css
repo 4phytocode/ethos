@@ -16,6 +16,26 @@ body[data-bg="image"] #backdrop { opacity: 1; }
 /* Homepage only: hidden on every other view. */
 body[data-bg-scope="home"]:not([data-view="home"]) #backdrop { opacity: 0; }
 
+/* Patterns (PLAN-retro-demo.md, 5.5): the desktop behind the windows. Plain
+   CSS, no image, so they carry no readability veil; they stay low-contrast so
+   that text on them keeps its contrast. */
+body[data-bg="pattern"] #backdrop { opacity: 1; background-color: var(--desktop); }
+body[data-bg="pattern"][data-bg-pattern="dither"] #backdrop {
+  background-image: repeating-conic-gradient(color-mix(in srgb, var(--desktop) 70%, #000) 0 25%, transparent 0 50%);
+  background-size: 4px 4px; }
+body[data-bg="pattern"][data-bg-pattern="grid"] #backdrop {
+  background-image: linear-gradient(color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1px),
+                    linear-gradient(90deg, color-mix(in srgb, var(--fg) 9%, transparent) 1px, transparent 1px);
+  background-size: 16px 16px; }
+body[data-bg="pattern"][data-bg-pattern="scanlines"] #backdrop {
+  background-image: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.25) 0 1px, transparent 1px 3px); }
+
+/* Scanlines over the dark theme (Settings > Background > Scanlines). Very faint,
+   and never over light mode. Pointer-events off, so it cannot block a click. */
+#crt { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: none;
+       background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.06) 0 1px, transparent 1px 3px); }
+body.dark[data-crt="on"] #crt { display: block; }
+
 /* Gradient: three soft colour fields drifting on long, offset loops. Each
    layer moves on its own period, so the pattern never visibly repeats. */
 #backdrop::before { content: ""; position: absolute; inset: -30%;

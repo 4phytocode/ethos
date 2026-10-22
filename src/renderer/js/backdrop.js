@@ -17,7 +17,10 @@ const IMAGE_KEY = 'ethos.backdropImage';
 const MAX_SIDE = 2560;
 const HEX = /^#[0-9a-f]{6}$/i;
 
-const MODES = [['off', 'Off'], ['gradient', 'Gradient'], ['image', 'Image']];
+const MODES = [['pattern', 'Pattern'], ['gradient', 'Gradient'], ['image', 'Image'], ['off', 'Off']];
+// Drawn in CSS (styles/backdrop.css), so they cost no bytes and need no CSP change.
+const PATTERNS = [['teal', 'Teal desktop'], ['dither', 'Dither'], ['grid', 'Grid'], ['scanlines', 'Scanlines']];
+const ON_OFF = [['on', 'On'], ['off', 'Off']];
 const SCOPES = [['home', 'Homepage'], ['all', 'Everywhere']];
 const SPEEDS = [['slow', 'Slow'], ['normal', 'Normal'], ['fast', 'Fast']];
 const PALETTES = [['aurora', 'Aurora'], ['dawn', 'Dawn'], ['ocean', 'Ocean'],
@@ -26,7 +29,7 @@ const PALETTES = [['aurora', 'Aurora'], ['dawn', 'Dawn'], ['ocean', 'Ocean'],
 export const PRESETS = [['forest', 'Forest'], ['valley', 'Valley'], ['meadow', 'Meadow'],
   ['canyon', 'Canyon'], ['hills', 'Hills'], ['peaks', 'Peaks'], ['shore', 'Shore'], ['night', 'Night']];
 
-const DEFAULTS = { mode: 'gradient', scope: 'home', palette: 'aurora', speed: 'normal',
+const DEFAULTS = { mode: 'pattern', pattern: 'teal', crt: true, scope: 'all', palette: 'aurora', speed: 'normal',
   colors: ['#c7d7fe', '#fbcfe8', '#bbf7d0'], image: 'preset:peaks' };
 
 let prefs = { ...DEFAULTS, colors: [...DEFAULTS.colors] };
@@ -39,6 +42,8 @@ function load() {
   try { raw = JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { /* defaults */ }
   if (!raw || typeof raw !== 'object') return;
   if (has(MODES, raw.mode)) prefs.mode = raw.mode;
+  if (has(PATTERNS, raw.pattern)) prefs.pattern = raw.pattern;
+  if (typeof raw.crt === 'boolean') prefs.crt = raw.crt;
   if (has(SCOPES, raw.scope)) prefs.scope = raw.scope;
   if (has(PALETTES, raw.palette)) prefs.palette = raw.palette;
   if (has(SPEEDS, raw.speed)) prefs.speed = raw.speed;
@@ -71,6 +76,8 @@ function apply() {
   // "Image" with nothing usable falls back to the gradient rather than a blank page.
   body.dataset.bg = prefs.mode === 'image' && !url ? 'gradient' : prefs.mode;
   body.dataset.bgScope = prefs.scope;
+  body.dataset.bgPattern = prefs.pattern;
+  body.dataset.crt = prefs.crt ? 'on' : 'off';
   body.dataset.bgPalette = prefs.palette;
   body.dataset.bgSpeed = prefs.speed;
   for (const [i, v] of ['--bd-a', '--bd-b', '--bd-c'].entries()) {
@@ -95,6 +102,9 @@ export function initBackdropSettings() {
   els = {
     mode: document.getElementById('set-bg-mode'),
     scope: document.getElementById('set-bg-scope'),
+    pattern: document.getElementById('set-bg-pattern'),
+    patternRows: document.querySelectorAll('.set-bg-patternrow'),
+    crt: document.getElementById('set-bg-crt'),
     gradientRows: document.querySelectorAll('.set-bg-gradient'),
     imageRows: document.querySelectorAll('.set-bg-imagerow'),
     palettes: document.getElementById('set-bg-palettes'),
@@ -145,6 +155,9 @@ function render() {
   if (!els) return;
   segs(els.mode, MODES, prefs.mode, (mode) => set({ mode }));
   segs(els.scope, SCOPES, prefs.scope, (scope) => set({ scope }));
+  if (els.pattern) segs(els.pattern, PATTERNS, prefs.pattern, (pattern) => set({ pattern }));
+  if (els.crt) segs(els.crt, ON_OFF, prefs.crt ? 'on' : 'off', (v) => set({ crt: v === 'on' }));
+  if (els.patternRows) els.patternRows.forEach(r => { r.hidden = prefs.mode !== 'pattern'; });
   segs(els.speed, SPEEDS, prefs.speed, (speed) => set({ speed }));
   els.gradientRows.forEach(r => { r.hidden = prefs.mode !== 'gradient'; });
   els.imageRows.forEach(r => { r.hidden = prefs.mode !== 'image'; });

@@ -33,6 +33,13 @@ const ALPHA_MIN = 0.004;       // below this the layout counts as settled
 const MIN_ZOOM = 0.2, MAX_ZOOM = 4;
 const CLICK_SLOP = 4;          // px of travel before a press becomes a drag
 
+// Pages are squares, folders hollow squares (PLAN-retro-demo.md, 6.8). The
+// square is snapped to whole pixels so its edges stay crisp at any zoom.
+function square(ctx, x, y, half) {
+  const s = Math.max(1, Math.round(half));
+  ctx.rect(Math.round(x) - s, Math.round(y) - s, s * 2, s * 2);
+}
+
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 let canvas, ctx, statsEl, emptyEl, listEl, searchEl, sbBtn, panelEl;
@@ -373,7 +380,7 @@ function draw() {
     const r = n.r * (1 + 0.45 * n.g);
     ctx.globalAlpha = dim ? 0.18 : 1;
     ctx.beginPath();
-    ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    square(ctx, n.x, n.y, r);
     if (n.kind === 'folder') {
       ctx.fillStyle = colors.bg;
       ctx.fill();
@@ -381,7 +388,7 @@ function draw() {
       ctx.strokeStyle = colors.muted;
       ctx.stroke();
       ctx.beginPath();
-      ctx.arc(n.x, n.y, Math.max(1.5, r * 0.28), 0, Math.PI * 2);
+      square(ctx, n.x, n.y, Math.max(1.5, r * 0.28));
       ctx.fillStyle = colors.muted;
       ctx.fill();
     } else if (n.temporary) {
@@ -397,7 +404,7 @@ function draw() {
     // The note open in the editor wears a ring, so you can find your place.
     if (n.id === openId) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, r + 4 / cam.k, 0, Math.PI * 2);
+      square(ctx, n.x, n.y, r + 4 / cam.k);
       ctx.lineWidth = 1.2 / cam.k;
       ctx.strokeStyle = colors.fg;
       ctx.stroke();

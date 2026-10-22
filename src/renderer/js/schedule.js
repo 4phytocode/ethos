@@ -16,6 +16,7 @@ import * as state from './state.js';
 import { show, onEnter, onLeave, current } from './views.js';
 import { notify } from './notifications.js';
 import { plannedSpan, openTodoDay } from './todo.js';
+import { Spring } from './spring.js';
 
 const HOUR_PX = 52;
 const SNAP = 15;
@@ -72,54 +73,7 @@ function el(tag, cls, text) {
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // ─── The ink spring ───
-// Under-damped on purpose: the shape lags the pointer, overshoots slightly and
-// settles. Its velocity leans it sideways and thins it vertically, which is
-// what makes the motion read as fluid.
-class Spring {
-  constructor(node) {
-    this.node = node;
-    this.cur = null;
-    this.tgt = null;
-    this.vel = { x: 0, y: 0, w: 0, h: 0 };
-    this.raf = 0;
-  }
-
-  to(t) {
-    this.tgt = t;
-    if (!this.cur || reducedMotion.matches) this.cur = { ...t };
-    if (!this.raf) this.raf = requestAnimationFrame(() => this.step());
-  }
-
-  step() {
-    this.raf = 0;
-    let moving = false;
-    for (const k of Object.keys(this.tgt)) {
-      const v = this.vel[k] * 0.62 + (this.tgt[k] - this.cur[k]) * 0.22;
-      this.vel[k] = v;
-      this.cur[k] += v;
-      if (Math.abs(v) < 0.05 && Math.abs(this.tgt[k] - this.cur[k]) < 0.05) {
-        this.cur[k] = this.tgt[k];
-        this.vel[k] = 0;
-      } else {
-        moving = true;
-      }
-    }
-    this.paint();
-    if (moving) this.raf = requestAnimationFrame(() => this.step());
-  }
-
-  paint() {
-    const { x, y, w, h } = this.cur;
-    const lean = clamp(this.vel.x * 0.35, -9, 9);
-    const thin = clamp(Math.abs(this.vel.y) * 0.004, 0, 0.06);
-    const s = this.node.style;
-    s.transform = 'translate(' + x + 'px, ' + y + 'px) skewX(' + (-lean) + 'deg) scaleX(' + (1 - thin) + ')';
-    if (w !== undefined) s.width = w + 'px';
-    if (h !== undefined) s.height = h + 'px';
-  }
-
-  stop() { cancelAnimationFrame(this.raf); this.raf = 0; }
-}
+// The Spring class lives in spring.js; the ink is its default paint.
 
 // ─── View state ───
 

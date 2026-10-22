@@ -25,6 +25,7 @@
   --accent: #000080;    /* selection, title bars, the one accent */
   --accent-2: #1084d0;  /* far end of the title-bar gradient only */
   --accent-fg: #ffffff;
+  --title-fg: #ffffff;  /* text on the title bar gradient */
   --danger: #e81123;    /* destructive actions only */
   --ok: #008000;
   --warn: #8a5a00;      /* overdue, attention; readable on white */
@@ -45,7 +46,7 @@ body.dark {
   --bg: #05070b; --face: #0e1116; --field: #05070b;
   --fg: #d4e6ff; --muted: #8fa6c6; --line: #20262f;
   --card: #0e1116; --hover: #161a21;
-  --accent: #d4e6ff; --accent-2: #8fa6c6; --accent-fg: #05070b;
+  --accent: #d4e6ff; --accent-2: #8fa6c6; --accent-fg: #05070b; --title-fg: #d4e6ff;
   --danger: #ff7a7a; --ok: #9fe0b8; --warn: #ffb054; --desktop: #05070b;
   --hi: rgba(212, 230, 255, .2); --hi-2: rgba(212, 230, 255, .06);
   --lo: #000000; --lo-2: #000000;

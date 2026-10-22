@@ -62,18 +62,25 @@ let ctxMenu = null;
 export function showCtx(event, items) {
   closeCtx();
   ctxMenu = document.createElement('div');
-  ctxMenu.className = 'ctx-menu';
+  ctxMenu.className = 'ctx-menu menu';
 
   for (const item of items) {
-    const row = document.createElement('div');
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'menu-item';
     row.textContent = item.label;
     row.addEventListener('click', () => { closeCtx(); item.onClick(); });
     ctxMenu.appendChild(row);
   }
 
-  ctxMenu.style.left = event.clientX + 'px';
-  ctxMenu.style.top = event.clientY + 'px';
   document.body.appendChild(ctxMenu);
+  // The menu opens at the pointer, but never past the window's right or bottom
+  // edge (bugs.md 2.4): it moves back in by its own size when it would overflow.
+  const box = ctxMenu.getBoundingClientRect();
+  const x = Math.max(4, Math.min(event.clientX, window.innerWidth - box.width - 4));
+  const y = Math.max(4, Math.min(event.clientY, window.innerHeight - box.height - 4));
+  ctxMenu.style.left = x + 'px';
+  ctxMenu.style.top = y + 'px';
 }
 
 export function closeCtx() {

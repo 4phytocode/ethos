@@ -149,11 +149,8 @@
 .jr-cal-more { font-size: 10px; color: var(--muted); }
 
 /* Right-click context menu */
-.ctx-menu { position: fixed; min-width: 120px; background: var(--card); border: 1px solid var(--line);
-            border-radius: var(--radius); padding: 4px 0; z-index: 100; box-shadow: none; }
-body.dark .ctx-menu { box-shadow: none; }
-.ctx-menu div { padding: 7px 14px; font-size: 13px; cursor: pointer; }
-.ctx-menu div:hover { background: var(--hover); }
+/* The right-click menu is a .menu (styles/retro.css); this only places it. */
+.ctx-menu { position: fixed; z-index: 100; }
 
 /* Rename inline input */
 .rename-input { padding: 4px 10px; border: 1px solid var(--fg); border-radius: var(--radius); font-size: 13px;

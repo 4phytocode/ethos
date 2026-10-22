@@ -54,7 +54,7 @@ async function run() {
   check('mood and to-do cards share both edges', r.mood.l === r.todo.l && r.mood.r === r.todo.r, JSON.stringify(r));
   check('habits segment ends where the to-do card ends', r.habits.r === r.todo.r, JSON.stringify(r));
   check('fixed habit bar is gone', await js(`!document.querySelector('.habit-bar')`));
-  check('backdrop is on (gradient) by default', await js(`document.body.dataset.bg === 'gradient'`));
+  check('backdrop is the desktop pattern by default', await js(`document.body.dataset.bg === 'pattern' && document.body.dataset.bgPattern === 'teal'`));
   await shot('home.png');
   await js(`document.getElementById('sb-hide').click()`);
   await wait(700);
@@ -247,6 +247,22 @@ async function run() {
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Alpha').click()`);
   check('deleting a note removes the links to it',
     await until(`document.getElementById('nt-title').value === 'Alpha' && !document.querySelector('#nt-links-out .nt-link-open')`));
+
+  console.log('\nsound');
+  await js(`document.querySelector('[data-view="settings-page"]').click()`);
+  await until(`document.body.dataset.view === 'settings-page'`);
+  check('the journal and notes editors take typing sounds',
+    await js(`document.getElementById('jp-textarea').hasAttribute('data-typing-sound') && document.getElementById('nt-body').hasAttribute('data-typing-sound')`));
+  check('typing sounds are off by default', await js(`!(JSON.parse(localStorage.getItem('ethos.sound') || '{}').typing)`));
+  await js(`[...document.querySelectorAll('#set-sound-typing button')].find(b => b.textContent === 'On').click()`);
+  check('turning typing sounds on is kept', await until(`JSON.parse(localStorage.getItem('ethos.sound')).typing === true`));
+  // A key in an editor with sounds on builds the audio graph; any failure there
+  // lands in the console-error check at the end.
+  await js(`(() => { const t = document.getElementById('jp-textarea'); t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true })); })()`);
+  await wait(120);
+  await js(`[...document.querySelectorAll('#set-sound-typing button')].find(b => b.textContent === 'Off').click()`);
+  check('turning typing sounds off is kept', await until(`JSON.parse(localStorage.getItem('ethos.sound')).typing === false`));
+  check('the volume slider starts at the default', await js(`document.getElementById('set-sound-volume').value === '50'`));
 
   console.log('\nconsole');
   check('no renderer errors', errors.length === 0, errors.join(' | '));

@@ -20,6 +20,8 @@ import { notify } from './notifications.js';
 import { initBackdrop, initBackdropSettings } from './backdrop.js';
 import { initMood } from './mood.js';
 import { hydrateIcons } from './icons.js';
+import { initChrome } from './chrome.js';
+import { initSound, initSoundSettings } from './sound.js';
 
 // The app can stay open across midnight. Habits, the journal calendar and the
 // homepage read "today" when they draw, so a redraw at the new day is all it
@@ -58,6 +60,8 @@ async function main() {
   initTags();
   initJournals();
   initSettings();
+  initSound(notify);
+  initSoundSettings();
   initBackdropSettings();
   initClock();
   initQuote();
@@ -70,6 +74,7 @@ async function main() {
   initReminders();
   rollOverAtMidnight();
   hydrateIcons();
+  initChrome();
   playIntro();
 
   // Main asks before the window closes and waits for this answer, so text still
