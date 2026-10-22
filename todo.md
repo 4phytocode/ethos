@@ -4,7 +4,11 @@ See CONTEXT.md for how the software is built and maintained: layers,
 invariants, the IPC surface, environment traps, and decisions already made.
 This file is the roadmap only. Bugs live in bugs.md.
 
-Last updated 2026-10-19.
+Last updated 2026-10-23 (the retro redesign and demo is planned in PLAN-retro-demo.md).
+
+## Retro redesign and demo (2026-10-23)
+
+See PLAN-retro-demo.md. The answers to its open questions are recorded in its section 0a.
 
 ## Order of work (user's call, 2026-10-19)
 
@@ -52,7 +56,7 @@ creation, settle on drop) is the model. Bring it to every segment once the
 debugging pass is done.
 
 - [ ] Factor `Spring` out of `schedule.js` into a shared module
-- [ ] To-dos: drag to reorder with the ink, instead of the up / down buttons
+- [ ] To-dos: drag to reorder with the ink (drag and drop already exists, CONTEXT §15)
 - [ ] Habit tracker: drag across the grid to fill days
 - [ ] Journals: cards that settle when reordered or filtered
 - [ ] Notes: drag notes into folders, drag folders to reorder
@@ -112,9 +116,9 @@ Everything in bugs.md, plus these known gaps:
 - [ ] Habit tracker: tick or untick past days from the UI
 - [ ] Habit tracker: edit / rename habits, optional description and colour
 - [ ] Habit tracker: streaks, per-habit history view, missed days
-- [ ] The bottom habit bar is still a placeholder ("Your habits will appear here")
+- [x] The bottom habit bar: removed 2026-10-21 (habits are on the homepage)
 - [ ] Share one grid-drawing function between the journal streak and the habit grid
-- [ ] Edit a to-do's title from the UI
+- [x] Edit a to-do's title from the UI (inline rename, CONTEXT §15)
 - [ ] Verify the homepage to-do card shows real items end to end
 - [ ] Verify the quote feature in the app run (hover reveal, no clipped attribution)
 - [ ] Decide if quotes should ever come from a live source (BrainyQuote blocks it; ZenQuotes is not topic-filtered)

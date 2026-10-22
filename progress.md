@@ -3,6 +3,15 @@
 Short log, newest first. Details live in CONTEXT.md (what and why) and bugs.md
 (what is broken). Read those two before opening source files.
 
+## 2026-10-23: housekeeping (retro plan, phase 1)
+Branch `retro-demo`. The redesign and demo plan is in PLAN-retro-demo.md, with
+the user's answers in its section 0a. Prompts: the 50 gratitude prompts from
+references/journalling.txt are in. The journal nudge is 30s; the UI test
+shortens it through `ethos.test.nudgeMs`. The Plex licence is in
+fonts/. The two `.pre-restructure.bak` files are deleted. The docs were
+corrected against the code (bugs.md top note and §§3.2, 4, 6.7, 6.8, 8.1,
+8.9/8.10 order, 10.5, 10.10, 10.12). `npm run check` 84/84, `npm run test:ui` 55/55.
+
 ## 2026-10-21 (late night): note links and the graph view
 Notes pages link to each other (`page.links`, schema v7, by id; backlinks
 derived). In the note: Links chips, "+ Link note" picker, "Linked from". Graph

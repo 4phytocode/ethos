@@ -1,31 +1,61 @@
-// Journalling prompts, written for Ethos.
+// Journalling prompts.
 //
-// GRATITUDE was meant to come from references/journalling.txt, but that file
-// was empty when this was built (see bugs.md). Replace or extend this list
-// once it has content. DEEP is the "Surprise me" set: slower questions meant
-// to make the writer stop and reflect.
+// GRATITUDE is the 50-prompt set from references/journalling.txt (five groups:
+// personal growth, relationships, everyday moments, health, aspirations), kept
+// in the order the file gives them. DEEP is the "Surprise me" set: slower
+// questions meant to make the writer stop and reflect.
 
 export const GRATITUDE = [
-  'What is one small thing that went right today, and who or what made it possible?',
-  'Name a person you are glad is in your life. What would you thank them for if they were here?',
-  'What is something you own that quietly makes every day a little easier?',
-  'Describe a moment this week when you felt at ease. Where were you?',
-  'What is a skill you have now that you once struggled with?',
-  'Which part of your body or health are you grateful for today?',
-  'What did you learn recently that you are glad to know?',
-  'Think of a place that feels like home. What makes it feel that way?',
-  'What is a kindness someone showed you that you still remember?',
-  'What is something about today’s weather, light or season that you enjoyed?',
-  'Which meal, drink or taste are you glad you had this week?',
-  'What is a challenge you are facing that is also teaching you something?',
-  'Who made you laugh recently, and what happened?',
-  'What is one thing about your work or study that you would miss if it were gone?',
-  'What is a book, song or film that changed how you see something?',
-  'What opportunity do you have right now that a younger you would have wished for?',
-  'What is something in nature you noticed and appreciated lately?',
-  'What is one habit you have kept that you are proud of?',
-  'Who believed in you before you believed in yourself?',
-  'What is something ordinary in your day that you would want to keep forever?',
+  'What is something you’ve accomplished recently that makes you proud?',
+  'What challenge taught you the most about yourself?',
+  'What personal quality do you value most in yourself?',
+  'What habit has improved your life the most?',
+  'Who has encouraged your growth, and how have they impacted you?',
+  'What skill are you grateful to have learned?',
+  'How has your perspective on gratitude evolved?',
+  'What is a recent decision that has brought you peace or happiness?',
+  'Reflect on a time you showed resilience—what helped you through?',
+  'Write about a mistake that led to a positive outcome.',
+  'Who is someone you can always count on, and why?',
+  'Write about a meaningful conversation you’ve had recently.',
+  'Who inspires you to be your best self?',
+  'What is a memory with a loved one that always makes you smile?',
+  'Who has taught you a valuable life lesson, and what was it?',
+  'What act of kindness have you experienced this week?',
+  'What is something small someone did for you that made your day better?',
+  'Reflect on a shared tradition or ritual you’re grateful for.',
+  'Write a thank-you note to someone in your life.',
+  'What qualities do you appreciate most in your friends or family?',
+  'What is one small joy you noticed today?',
+  'Describe the coziest part of your morning routine.',
+  'What meal or drink are you grateful for this week?',
+  'Write about a moment of laughter you’ve shared recently.',
+  'What is your favorite part of the season right now?',
+  'Reflect on the most beautiful thing you’ve seen today.',
+  'What is a mundane chore or task that you secretly enjoy?',
+  'Write about a recent moment of peace or stillness.',
+  'What is a small luxury that brings you joy?',
+  'What is something about your home that you’re thankful for?',
+  'What activity or habit makes you feel most alive?',
+  'Write about a time you felt truly strong—physically, mentally, or emotionally.',
+  'What is a healthy choice you made recently that you’re proud of?',
+  'Reflect on a time when your body allowed you to do something amazing.',
+  'What is your favorite way to relax or recharge?',
+  'What is something about your health you often take for granted?',
+  'What is your favorite way to move your body?',
+  'Reflect on a moment when you felt connected to nature.',
+  'What is a wellness tip or ritual you’re grateful to have discovered?',
+  'What does self-care look like for you today?',
+  'What is a goal you’ve achieved that once felt out of reach?',
+  'Write about a dream you are excited to pursue.',
+  'Who has supported your aspirations, and how?',
+  'What future opportunity are you most grateful for?',
+  'Reflect on a time when your hard work paid off.',
+  'What motivates you to keep going on hard days?',
+  'Write about a hope you have for yourself or others.',
+  'What is a new beginning you’re thankful for?',
+  'Who inspires you to dream bigger?',
+  'How do your current efforts align with your vision for the future?',
 ];
 
 export const DEEP = [

@@ -18,7 +18,8 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ethos-ui-'));
 app.setPath('userData', tmp);
 require('../src/main/index.js');
 
-const NUDGE_WAIT_MS = 11500;   // NUDGE_MS (10s) plus slack
+const NUDGE_WAIT_MS = 11500;   // the test nudge delay (10s) plus slack
+const TEST_NUDGE_MS = 10000;   // set through ethos.test.nudgeMs; the product default is 30s
 const results = [];
 const errors = [];
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -77,6 +78,7 @@ async function run() {
   check('log shows today first', rows[0] && rows[0].startsWith('Today') && rows[0].includes('Slept well.'), JSON.stringify(rows));
   check('a missed day reads "Not logged"', rows[1] && rows[1].includes('Not logged'), JSON.stringify(rows));
 
+  await js(`localStorage.setItem('ethos.test.nudgeMs', '${TEST_NUDGE_MS}')`);
   console.log('\njournal nudge (waits ~' + Math.round(NUDGE_WAIT_MS / 1000) + 's per case)');
   await js(`document.getElementById('new-page-btn').click()`);
   await wait(600);

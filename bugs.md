@@ -1,5 +1,8 @@
 # Ethos — bug audit
 
+**Doc truth pass, 2026-10-23:** §3.2, §4, §6.7, §6.8, §8.1, §10.5, §10.10 and §10.12
+are updated or closed in place; the original text is kept as the record.
+
 **Fix pass, 2026-10-21 (night):** the data-loss races (§1), §2.2, §2.8, §6.1–6.5
 are fixed; see headings and `progress.md`. Everything else below is still open.
 The original text is kept as the record of what was found.
@@ -116,6 +119,8 @@ files there.)
 
 ### 2.6 The font-availability probe cannot detect substitution — `src/renderer/js/settings.js` (cosmetic, currently dormant)
 
+> Still dormant on 2026-10-23: Plex Mono and System UI both have `probe: null`.
+
 The canvas-width probe treats a substituted face (e.g. `Helvetica` resolving to
 Arial on Windows) as "installed", so the "Not installed — falls back" badge
 only triggers for families with no substitute at all. **Dormant since the
@@ -154,7 +159,7 @@ tag in the picker is a no-op (it re-sends the same single id, which the
 store detects as unchanged). Once applied, a tag can only be *replaced*,
 never cleared — the model happily accepts `tagIds: []`, the UI never offers it.
 
-### 3.2 The events/schedule model is fully built but dormant (documented intent)
+### 3.2 ~~The events/schedule model is fully built but dormant~~ (stale: the schedule was rebuilt 2026-10-19 and uses `events:*`)
 
 `events:create/update/delete` channels, the three preload functions, and
 `state.createEvent/updateEvent/removeEvent/eventsOn` all have **zero callers**;
@@ -166,6 +171,8 @@ exports.
 ---
 
 ## 4. Documentation drift — `CONTEXT.md`, `todo.md` (re-checked after the doc update; still open)
+
+> Closed 2026-10-23: the counts below were out of date (25 IPC channels, 84 checks). Fixed in the doc pass.
 
 Both docs were updated after the first audit (23:01 and 23:11). The new
 material is accurate — the homepage layout section, the habit-tracker
@@ -228,7 +235,7 @@ additions are wired correctly, and the only new defect found is §2.8.
 
 ---
 
-## 6. Third pass (2025-10-19) — found while reviewing for efficiency
+## 6. Third pass (2026-10-19) — found while reviewing for efficiency
 
 Read-only again; nothing was run except `npm run check` (60 passed, 0 failed).
 Items marked *from reading* have not been reproduced in the app.
@@ -287,7 +294,7 @@ minute".
 renaming (a to-do reminder's "Mark done", an autosave from elsewhere) wipes the
 input and the half-typed title with it. Related to Efficiencies item 2.
 
-### 6.7 More documentation drift — `CONTEXT.md`, `todo.md`, `bugs.md` (docs)
+### 6.7 More documentation drift — `CONTEXT.md`, `todo.md`, `bugs.md` (docs; closed 2026-10-23)
 
 - `todo.md` still says "Validated IPC surface (7 calls)" and "12 model-layer
   checks" / "16 checks"; `npm run check` now runs **60**, and there are 17
@@ -300,7 +307,7 @@ input and the half-typed title with it. Related to Efficiencies item 2.
 - `CONTEXT.md` §5 still names `renderer/js/schedule.js`, which no longer exists
   (carried over from §4).
 
-### 6.8 Fonts: the OFL licence text is not in the repo yet (docs / compliance)
+### 6.8 Fonts: the OFL licence text is not in the repo yet (docs / compliance; closed 2026-10-23: `LICENSE-IBMPlexMono.txt`)
 
 Plex Mono's licence requires its text to ship with the font. `fonts/README.md`
 says so but does not include it. Add upstream `LICENSE.txt` before an installer
@@ -391,7 +398,7 @@ real Playwright suite replaces it.
 
 Logged, not fixed, unless noted.
 
-### 8.1 `references/journalling.txt` is empty (gap)
+### 8.1 `references/journalling.txt` is empty (gap; closed 2026-10-23: 50 prompts loaded)
 0 bytes on disk, so the Gratitude prompts could not be taken from it. Ethos ships
 its own list in `renderer/js/prompts-data.js` for now. Paste the prompts into the
 file (or straight into `GRATITUDE`) and they can be swapped in.
@@ -428,15 +435,15 @@ alignment: 24/24. Still worth a look by eye: the 1lh paper rules with Plex Mono.
 Settings > Background > Image has a Remove uploaded image button, shown only
 when one is stored. Covered by test:ui.
 
-### 8.10 test:ui failed one check once in four runs (flaky)
-Which check was not captured. All waits are fixed sleeps (mood save 500ms,
-nudge 11.5s, view switches 300-600ms); replace them with polling for the
-expected state before trusting a single red run.
-
 ### 8.9 `ELECTRON_RUN_AS_NODE` is set in VS Code terminals (environment trap)
 `npm start` / `npm run test:ui` from the VS Code terminal run Electron as plain
 node and crash on `app.setPath`. Run `env -u ELECTRON_RUN_AS_NODE npm run test:ui`
 (bash) or `Remove-Item Env:ELECTRON_RUN_AS_NODE` (PowerShell) first.
+
+### 8.10 test:ui failed one check once in four runs (flaky)
+Which check was not captured. All waits are fixed sleeps (mood save 500ms,
+nudge 11.5s, view switches 300-600ms); replace them with polling for the
+expected state before trusting a single red run.
 
 ---
 
@@ -488,7 +495,7 @@ save about 8-10 MB. See Efficiencies.md, Storage step 2.
 About 2.3 MB that nothing at runtime reads. Exclude them from packaging. See
 Efficiencies.md, Storage step 3.
 
-### 10.5 `journalling.txt` is 0 bytes (gap)
+### 10.5 `journalling.txt` is 0 bytes (gap; closed 2026-10-23)
 Same as 8.1. The Gratitude prompts are hard-coded in `prompts-data.js`.
 
 ### 10.6 Pinned tasks in the past (logic)
@@ -508,7 +515,7 @@ Same as 8.9. VS Code terminals set it, and Electron then runs as plain node.
 Same as 8.6. Homepage habits, the habit page, the to-do page and the journal
 list all rebuild on every snapshot. Fine at this size.
 
-### 10.10 Electron is a dev dependency but is the whole runtime (packaging)
+### 10.10 Electron is a dev dependency but is the whole runtime (packaging; not a bug: electron-builder expects it in devDependencies)
 `package.json` has `electron` under `devDependencies`, and no packager is
 configured. A packaged build needs electron-builder or electron-forge, plus
 the icon handed over (CONTEXT.md, "The app icon").
@@ -520,7 +527,7 @@ refuse. Fix before the next commit.
 ### 10.12 Things that are not bugs but will bite later
 - `Efficiencies.md` was written before this pass and has no storage section
   until now. Read the Storage section before any packaging work.
-- Schema is at version 6. Any new on-disk field needs a migration step
+- Schema is at version 7 (checked 2026-10-23). Any new on-disk field needs a migration step
   (CONTEXT.md invariant 9).
 - The schedule and to-do plans are computed in main; any new plan rule goes in
   `store.js #rechain` and is tested in `scripts/check.js`, not in the renderer.

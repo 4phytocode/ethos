@@ -3,7 +3,7 @@
 Everything needed to pick this codebase up cold. Read this before changing
 anything; read `todo.md` for what is planned next.
 
-Last updated 2026-10-21, after the homepage / journal pass (backdrop, mood log,
+Last updated 2026-10-23 (housekeeping pass; the retro redesign is planned in PLAN-retro-demo.md). Before that, 2026-10-21, after the homepage / journal pass (backdrop, mood log,
 homepage habits, journal prompts and paper). See section 14 for that pass.
 
 ---
@@ -63,7 +63,7 @@ anything under `src/main`.**
 src/main/        the only code that touches disk or holds authoritative state
   index.js       app lifecycle, BrowserWindow, security posture
   protocol.js    the app://ethos scheme, CSP, path containment
-  ipc.js         the 23 IPC handlers, each wrapped in an { ok, error } envelope
+  ipc.js         the 25 IPC handlers, each wrapped in an { ok, error } envelope
   store.js       authoritative state + mutations + debounced saving
   vault.js       atomic disk I/O, the on-disk layout, quarantine
   schema.js      validation and migrations, shared by disk and IPC
@@ -76,7 +76,7 @@ src/preload/
 src/renderer/    rendering only; no fs, no business logic, no authority
   index.html
   styles/        base, clock, intro, journals, tags, todo, habits, settings,
-                 sidebar, schedule, notes, graph, notifications, backdrop, home, prompts
+                 sidebar, schedule, notes, graph, notifications, backdrop, home, prompts, fonts, quote
   js/
     app.js           entry point: load state, then wire views
     state.js         cache of main-process state + the only bridge calls
@@ -84,7 +84,7 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     sidebar.js       Notion-style sidebar: hide / show, Ctrl+\
     schedule.js      the schedule: views, draw/move/stretch gestures, editor, date helpers
     notes.js         Notes section: sidebar tree + notes view + links between notes
-    graph.js         graph view: every note and folder on a canvas (§17)
+    graph.js         graph view: every note and folder on a canvas (§16)
     journals.js      journals list, tabs, display modes, note editor
     journal-streak.js  contribution grid + the daily goal toast
     todo.js          to-do page, homepage card, tick box, reminder toast
@@ -99,6 +99,11 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     mood.js          homepage "How are you feeling?" card + Mood log page
     prompts.js       journal prompts, empty-page nudge, plain/lines/grid paper
     prompts-data.js  the Gratitude and "Surprise me" prompt lists
+    quotes.js        the homepage quote list (see "Homepage quote")
+    todo-parse.js    typed times in the to-do input (pure, no DOM)
+
+renderer/fonts/       IBM Plex Mono, OFL; the licence texts are alongside
+renderer/backgrounds/ bundled preset backdrops; credits in its README
 
 scripts/check.js             the model-layer checks
 assets/          icon.ico + icon.png, the app icon (see "The app icon")
@@ -106,22 +111,18 @@ imgs/            source artwork supplied by the user; not read at runtime
 todo.md            roadmap and known gaps
 ```
 
-`main.js.pre-restructure.bak` and `notifications.js.pre-restructure.bak` are
-the pre-restructure originals, and `backups/` holds an older copy of `src/`.
-They are the only history from before git was set up (§9), and they are in the
-first commit, so they can now be deleted from the working tree if wanted.
+The two `.pre-restructure.bak` files were deleted on 2026-10-23; their history is
+in commit `6336f28`. `backups/` holds an older copy of `src/` and is kept for now.
 
 ---
 
 ### Chrome that belongs to only some views
 
 `views.js` writes the active view id to `document.body.dataset.view`, and CSS
-keys off it. The habit bar uses this: it is `position: fixed` at the bottom, so
-any view it covers would have to reserve 140px of bottom padding or its content
-scrolls underneath — which is exactly what happened to the journals calendar.
-Rather than every view paying that cost, the bar is shown only on `home` and
-`habit-page`. Anything else fixed to an edge should be scoped the same way, and
-`initViews()` seeds the attribute before the first navigation so it is correct
+keys off it. The fixed habit bar used this rule until it was removed on 2026-10-21 (see
+"Homepage layout"). The rule still holds for any fixed edge element: over a
+scrolling view it eats the content underneath, so scope it by view.
+`initViews()` seeds the attribute before the first navigation, so it is correct
 on first paint.
 
 ### Chrome that reveals on hover
@@ -251,9 +252,8 @@ field). The fixed bottom `.habit-bar` was **removed** on 2026-10-21, so no view
 reserves bottom padding for it any more (the "view-scoped chrome" note above is
 still the rule for anything fixed). Homepage card styles beyond the to-do card
 are in `styles/home.css`. The to-do card: the clock on the left
-(`.home-row` > `.home-clock`), the **to-do card** beside it (`.todo-card`). The card's heading is
-lowercase `to-do's` and it currently shows only the empty-state line,
-"Everything is done for the day!". Real to-do items are not built yet.
+(`.home-row` > `.home-clock`), the **to-do card** beside it (`.todo-card`). The card's heading is lowercase `to-do's`. It lists today's tasks, with
+remember-items on one dashed line below (§15).
 
 ### The homepage clock
 
@@ -819,8 +819,7 @@ Tracked in `todo.md`; repeated here because they shape design choices.
 - Real operating-system notification delivery has not been exercised on a
   second machine. The scheduler's choice to raise one is tested; the banner
   itself is Electron's `Notification`.
-- A to-do's title cannot be edited in the UI (the model supports it), and past
-  days cannot be ticked from the habit page (the model supports it too).
+- Past days cannot be ticked from the habit page (the model supports it).
 - The habit grid duplicates the drawing code in `journal-streak.js`. They share
   only CSS. A shared `drawGrid` would remove it.
 - The homepage scrolls at small window heights now that the to-do card is
@@ -829,10 +828,9 @@ Tracked in `todo.md`; repeated here because they shape design choices.
   controls, no account section.
 - Reminders reach Windows only. Nothing reaches a phone yet (§1).
 - No TypeScript, no linter; `scripts/check.js` is a hand-rolled runner.
-- `test.txt` is an empty leftover, unrelated to anything.
 
 Given the subscription direction, encryption at rest and export are the two
-worth doing before the habit tracker.
+worth doing before a paid release.
 
 ---
 
@@ -849,15 +847,15 @@ worth doing before the habit tracker.
 | `tagIds` array with a one-tag UI | many-to-many later is UI work, not a migration |
 | Event dates as local `YYYY-MM-DD`, times as minutes from midnight | no timezone in the record; sorting and overlap are arithmetic |
 | Events in one file, notes one file each | records vs. documents; see §5 |
-| The schedule was built before the habit tracker | user's call, 2025-10-18; it also exercised the migration path while the vault was still young |
-| Schedule UI removed, model kept | user's call, 2025-10-18: it needs rework, and keeping the validated model makes resuming cheap |
+| The schedule was built before the habit tracker | user's call, 2026-10-18; it also exercised the migration path while the vault was still young |
+| ~~Schedule UI removed, model kept~~ *(superseded 2026-10-19: the schedule was rebuilt)* | user's call, 2026-10-18: it needs rework, and keeping the validated model makes resuming cheap |
 | View-scoped chrome via `body[data-view]` | a fixed bar over a scrolling view silently eats its content; see §3 |
 | One `--font-ui` for the whole app | the editor's hard-coded serif was the one surface the setting could not reach |
 | The plan is computed in main, not the page | reminders have to fire with the window closed, and two copies of the plan would disagree |
 | To-dos chain end to end from now | the user asked for finish times across several tasks; per-task fixed start times were not requested |
 | Close hides to the tray only while a reminder is pending | running in the background for the whole session would be an unwelcome surprise for an app with nothing to remind about |
 | Reminder scheduler waits for the page | an overdue reminder at launch must not be sent into a page that has not loaded |
-| The Ethos "e." logo is the app icon | user's call, 2025-10-19: replaces Electron's default; tray and in-app marks left as they were |
+| The Ethos "e." logo is the app icon | user's call, 2026-10-19: replaces Electron's default; tray and in-app marks left as they were |
 | IBM Plex Mono is the default font | user's call: calm and professional across the whole app; System UI remains as an option. Shipped in `renderer/fonts`, never fetched |
 | Schedule rebuilt on the kept model; gestures over forms | user's call, 2026-10-19: Google Calendar-like but minimal, "drawing like liquid". References in `references/` |
 | Event reminders always raise a Windows banner | user asked for calendar alerts to reach Windows; to-dos keep the quieter in-front rule |
@@ -906,11 +904,11 @@ worth doing before the habit tracker.
 - **Journal list**: "+ New Journal" now sits under the tabs, search and filter
   bars, directly above the list.
 - **Journal prompts** (`prompts.js`). "Show prompts" is always visible top right
-  of the journal page. After `NUDGE_MS` (10s for testing; intended ~30s) of no
+  of the journal page. After `NUDGE_MS` (30s; the UI test shortens it through `ethos.test.nudgeMs`) of no
   typing on a page with fewer than 12 characters, a nudge offers prompts, once
   per idle spell. Panel: Gratitude / Surprise me, Another, Use this (inserts the
   prompt as the first line and saves), No thanks. Lists are in `prompts-data.js`,
-  written for Ethos (journalling.txt was empty; bugs.md 8.1).
+  the Gratitude list is the 50 prompts from `references/journalling.txt` (loaded 2026-10-23; bugs.md 8.1).
 - **Paper**: Plain / Lines / Grid on every journal page. Rules are `1lh` apart so
   they follow the font size, `background-attachment: local` so they scroll with
   the text. Per note in localStorage `ethos.paper` (`{ notes: {id: mode}, last }`),
@@ -950,7 +948,7 @@ say when the day's work ends. All wording in the UI is our own.
   "Show schedule" action. The existing "Time's up" reminder still fires at `dueAt`.
 - Homepage card lists tasks only, with remember items on one dashed line below.
 
-## 17. Note links and the graph view (2026-10-21)
+## 16. Note links and the graph view (2026-10-21)
 
 Modelled on Obsidian's graph. Covers the Notes section (pages and folders);
 journal notes are not in it.
@@ -993,7 +991,7 @@ journal notes are not in it.
 
 ---
 
-## 16. Start here (for the next session)
+## 17. Start here (for the next session)
 
 Read in this order, and stop as soon as you have what you need. Only open a
 source file once a section here or in `Efficiencies.md` has sent you to it.
