@@ -232,7 +232,7 @@ because misattributed quotes are common.
 
 ### Logo, scrollbar
 
-The brand (`.brand`, the "e" mark) is `position: fixed`, so scrolled content
+The brand (`.brand`, the logo mark) is `position: fixed`, so scrolled content
 passes underneath it. It carries a `filter: drop-shadow(...)` halo in the page
 colour (`--bg`), which knocks back content around the letters. Because the
 colour is the page background it is invisible on an empty page and follows dark
@@ -312,30 +312,38 @@ relies on an installed font.
 Stored preferences that name a removed font fall back to System UI, because
 `load()` only accepts ids that are still in `FONTS`.
 
-### The app icon
+### The app icon and the logo
 
-The Ethos logo is a white, italic lowercase "e" followed by a full stop, on
-black. The user's original is `imgs/logo(1).png` (800x800, palette PNG). It
-replaces Electron's default icon on the window, title bar and taskbar.
+The Ethos logo is `imgs/new logo [1].png` (800x800, RGBA): a black disc with a
+white "e]" and an orbit ring. It is the logo for the whole software, from
+2026-10-22 (userref). The earlier "e." mark (`imgs/logo(1).png`) is kept in
+`imgs/` as history only.
 
-- `assets/icon.ico` (16, 24, 32, 48, 64, 128, 256) and `assets/icon.png`
-  (512x512) are generated from that source with Pillow (`Image.LANCZOS`).
-  Re-run the resize if the artwork changes; there is no build script yet.
-- `src/main/index.js` passes `icon: ICON` in `windowOptions()`: the `.ico` on
-  Windows (crisp at every taskbar size), the PNG elsewhere.
-- `assets/` sits **outside `src/renderer`** on purpose. The `app://` handler
-  only serves files inside `src/renderer`, so the icon is never reachable from
-  the page.
-- Still on the old mark: the **tray icon** (`tray.js`, a dot beside a ring
-  drawn in code) and the **in-app brand and intro "e"** (inline SVG set in
-  Helvetica, `index.html` and `intro.js`). They were left alone because the
-  request was to replace the Electron logo. The new logo is a different
-  letterform from the SVG "e" (italic, with a full stop), so swapping those
-  would be a design decision, not a swap.
-- `npm start` runs `electron.exe`, so a *pinned* taskbar shortcut and Task
-  Manager still show Electron's icon in development. The window itself shows
-  the Ethos icon. A packaged build needs the `.ico` handed to the packager as
-  the executable icon; no packager is configured yet.
+`scripts/build-icons.py` makes every size from that source, with Pillow. Run it
+with `python -I scripts/build-icons.py` whenever the artwork changes. It writes:
+
+- `assets/icon.ico` (16 to 256) and `assets/icon.png` (512): the window, the
+  taskbar and the Electron icon. `src/main/index.js` passes `icon: ICON`: the
+  `.ico` on Windows, the PNG elsewhere.
+- `assets/tray-16.png` and `tray-16@2x.png`: the tray icon (`tray.js` loads the
+  file; Electron picks the @2x copy on high-DPI screens). At 16px the artwork is
+  cropped to its middle before it is shrunk.
+- `src/renderer/img/logo-64/128/512.png`: the in-app brand mark (`#brand-logo`)
+  and the launch intro (`#intro-logo`). The page can only load files under
+  `src/renderer`, so these are copies, not links into `assets/`.
+
+`assets/` sits **outside `src/renderer`** on purpose: the `app://` handler only
+serves files inside `src/renderer`, so `assets/` is never reachable from the
+page. The page copies live in `src/renderer/img/`.
+
+`npm start` runs `electron.exe`, so a *pinned* taskbar shortcut and Task Manager
+still show Electron's icon in development. A packaged build needs the `.ico`
+handed to the packager as the executable icon (`win.icon` in the electron-builder
+config, once it is added).
+
+The launch intro (`js/intro.js`, `styles/intro.css`) is a short boot sequence on
+black: three status lines, then the logo flickers in and moves into the brand
+mark. A key press or a click skips it. Reduced motion skips it.
 
 ## 4. The four layers, and the rule for each
 
@@ -855,7 +863,7 @@ worth doing before a paid release.
 | To-dos chain end to end from now | the user asked for finish times across several tasks; per-task fixed start times were not requested |
 | Close hides to the tray only while a reminder is pending | running in the background for the whole session would be an unwelcome surprise for an app with nothing to remind about |
 | Reminder scheduler waits for the page | an overdue reminder at launch must not be sent into a page that has not loaded |
-| The Ethos "e." logo is the app icon | user's call, 2026-10-19: replaces Electron's default; tray and in-app marks left as they were |
+| The new logo (`imgs/new logo [1].png`) is the logo everywhere | user's call, 2026-10-22: app, executable, tray, in-app mark and intro. Replaces the "e." mark of 2026-10-19 (tray and in-app marks included this time) |
 | IBM Plex Mono is the default font | user's call: calm and professional across the whole app; System UI remains as an option. Shipped in `renderer/fonts`, never fetched |
 | Schedule rebuilt on the kept model; gestures over forms | user's call, 2026-10-19: Google Calendar-like but minimal, "drawing like liquid". References in `references/` |
 | Event reminders always raise a Windows banner | user asked for calendar alerts to reach Windows; to-dos keep the quieter in-front rule |

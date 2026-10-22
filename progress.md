@@ -12,6 +12,12 @@ fonts/. The two `.pre-restructure.bak` files are deleted. The docs were
 corrected against the code (bugs.md top note and §§3.2, 4, 6.7, 6.8, 8.1,
 8.9/8.10 order, 10.5, 10.10, 10.12). `npm run check` 84/84, `npm run test:ui` 55/55.
 
+Logo (phase 2): the new logo is the mark everywhere. `scripts/build-icons.py`
+builds the .ico, the 512 PNG, the tray PNGs (with @2x) and the page copies in
+src/renderer/img. The tray loads a file now (the drawn icon is gone). The intro
+is a boot sequence, then the logo moves into the brand mark (2.4s, skippable).
+Checks 84/84, UI 55/55.
+
 ## 2026-10-21 (late night): note links and the graph view
 Notes pages link to each other (`page.links`, schema v7, by id; backlinks
 derived). In the note: Links chips, "+ Link note" picker, "Linked from". Graph

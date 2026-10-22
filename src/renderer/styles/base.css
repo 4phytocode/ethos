@@ -40,9 +40,8 @@ body { font-family: var(--font-ui, Helvetica, Arial, sans-serif);
             against an empty page and follows dark and light. */
          filter: drop-shadow(0 0 4px var(--bg)) drop-shadow(0 1px 6px var(--bg));
          transition: opacity 0.3s ease, color 0.25s ease; }
-#brand-logo,
-#brand-logo circle,
-#brand-logo text { color: var(--fg); fill: currentColor; }
+/* The mark is the logo PNG (src/renderer/img, built by scripts/build-icons.py). */
+#brand-logo { display: block; width: 26px; height: 26px; }
 
 /* === Right sidebar === lives in sidebar.css. Its width is --sb-w on body;
    views and the habit bar take their right edge from it. */
