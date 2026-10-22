@@ -8,7 +8,8 @@ Last updated 2026-10-23 (the retro redesign and demo is planned in PLAN-retro-de
 
 ## Retro redesign and demo (2026-10-23)
 
-See PLAN-retro-demo.md. The answers to its open questions are recorded in its section 0a.
+See PLAN-retro-demo.md. The answers to its open questions are in its section 0a; what was
+done and what was left is in its section 6. The demo edition, the installer and typing sounds are in.
 
 ## Order of work (user's call, 2026-10-19)
 
@@ -55,7 +56,7 @@ The schedule's ink (spring follow, lean and squash from velocity, bloom on
 creation, settle on drop) is the model. Bring it to every segment once the
 debugging pass is done.
 
-- [ ] Factor `Spring` out of `schedule.js` into a shared module
+- [x] Factor `Spring` out of `schedule.js` into a shared module (js/spring.js, 2026-10-23)
 - [ ] To-dos: drag to reorder with the ink (drag and drop already exists, CONTEXT §15)
 - [ ] Habit tracker: drag across the grid to fill days
 - [ ] Journals: cards that settle when reordered or filtered

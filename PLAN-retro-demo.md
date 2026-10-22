@@ -1,5 +1,8 @@
 # Ethos — retro redesign and demo release: execution plan
 
+> Executed on branch `retro-demo` through phase 10 on 2026-10-23. What was done, and what was
+> left, is in section 6.
+
 Written 2026-10-23 from `references/userref.md` (22/10/26), the ten images in
 `references/ui design/`, `CONTEXT.md`, `bugs.md`, `Efficiencies.md`, `todo.md`
 and a check of the code itself. **The executor is Claude Haiku 5.5.** Work the
@@ -879,3 +882,34 @@ Commit `Retro: docs`.
 Do the phases in order and stop at a phase boundary. The minimum that delivers
 the userref is Phases 1-3, 5, 6 (Home, Journal, Notes), 7.5 (typing sounds),
 8 and 9. Everything else is polish.
+
+---
+
+## 6. Execution record (2026-10-23)
+
+Executed by Claude Haiku 5.5 on branch `retro-demo`, one commit per phase. Done in
+full unless marked.
+
+| Phase | Result |
+|---|---|
+| 1 Housekeeping | Done. Docs corrected, prompts loaded (50), nudge 30s with a test override, Plex licence, .bak files removed. |
+| 2 Logo | Done. Every size from `scripts/build-icons.py`; tray is a file; intro is a boot sequence. |
+| 3 Tokens and fonts | Done. Website palette in dark; Pixelify Sans (Silkscreen and VT323 dropped); radii 0; blurred shadows removed. |
+| 4 Kit | Done: retro.css, icons.js (54), dialog.js. Tabs and progress classes exist but are not used yet. The round tick boxes are square now; the 16px check drawn as a pixel tick was not built. |
+| 5 Shell | Mostly. Title bars and status rows, Start-menu sidebar, pattern backdrop, scanlines (with a toggle). Not done: the journal name in the title bar (5.1), the vertical banner (5.3), and the sliding highlight (5.3). |
+| 6 Segments | Partly: toasts, the context menu (fixes bugs 2.4), graph squares, and a shared chrome for every view. Not done: 6.2 clock, 6.3 schedule restyle, 6.4 to-do two windows, 6.5 habit squares and progress, 6.6 journal menu bar, 6.7 notes folder grid, 6.9 settings tabs. |
+| 7 Motion and sounds | Mostly. Spring moved, buttons press, window open, caret, typing sounds with Settings. Not done: 7.4 "alive" details (apart from the shared spring). |
+| 8 Demo edition | Done. Edition flag, full-only gating, navigation refused in the demo. |
+| 9 Installer | Built and smoke-tested: the packaged app runs and shows the demo. Not done: 9.2 font subsetting (not needed at this size). Not seen by eye: the intro, the tray icon, the Windows banner. |
+| 10 Docs | Done here (CONTEXT section 17, bugs 12, Efficiencies, todo, progress). |
+
+Decisions made where the plan left room (all can be reversed):
+- Dark theme is the website's palette, per the user's answer about ethos web.
+- Pattern is the default backdrop on every view; photos and gradients are still there.
+- Scanlines are a toggle in Settings > Background, not always on.
+- The sound is off by default, with a one-time toast offer.
+- The code-signing step was skipped, as the user asked.
+
+Left for the user: the Windows banner, the intro and tray on a real desktop, the
+packaged vault question (bugs 12.8), `npm audit` (bugs 12.10), and the two deleted
+reference images in `references/` (they show as deleted in git; not restored).

@@ -47,7 +47,9 @@ speculatively.
 ```
 npm start          # electron .
 npm run check      # 84 model-layer checks, plain node, no Electron
-npm run test:ui    # 55 end-to-end checks in a real window, throwaway vault (~50s)
+npm run test:ui    # 68 end-to-end checks in a real window, throwaway vault (~60s)
+npm run dist       # the Windows installer in dist/ (electron-builder; see section 17)
+npm run icons      # rebuild every logo size from imgs/new logo [1].png (Pillow)
 ```
 
 `npm run check` is the fast feedback loop. It imports `src/main/{vault,store,
@@ -68,7 +70,8 @@ src/main/        the only code that touches disk or holds authoritative state
   vault.js       atomic disk I/O, the on-disk layout, quarantine
   schema.js      validation and migrations, shared by disk and IPC
   reminders.js   to-do and event reminder scheduler (no electron import; testable in node)
-  tray.js        tray icon, drawn in code, so Ethos can run with its window closed
+  tray.js        tray icon (assets/tray-16.png), so Ethos can run with its window closed
+  edition.js     demo or full; the page hides what the edition lacks (section 17)
 
 src/preload/
   index.js       contextBridge surface; exposes functions, never ipcRenderer
@@ -101,10 +104,17 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     prompts-data.js  the Gratitude and "Surprise me" prompt lists
     quotes.js        the homepage quote list (see "Homepage quote")
     todo-parse.js    typed times in the to-do input (pure, no DOM)
+    icons.js         the 54 pixel icons, built from path data (no runtime fetch)
+    dialog.js        confirmDialog(): the retro modal for deletes
+    chrome.js        title bar and status row for every view
+    spring.js        the shared under-damped Spring (the ink is its default paint)
+    sound.js         typing clicks (Web Audio, off by default)
+    (styles/retro.css is the shared component kit; see section 17)
 
 renderer/fonts/       IBM Plex Mono, OFL; the licence texts are alongside
 renderer/backgrounds/ bundled preset backdrops; credits in its README
 
+scripts/build-icons.py       every logo size from the master artwork (Pillow)
 scripts/check.js             the model-layer checks
 assets/          icon.ico + icon.png, the app icon (see "The app icon")
 imgs/            source artwork supplied by the user; not read at runtime
@@ -672,7 +682,8 @@ notify.error(title, message)     // an action failed; message is err.message
 notify.show({ title, message, type, duration, action })
 ```
 
-The surface is translucent with a backdrop blur, enters on the app's spring
+The surface is an opaque retro window (styles/notifications.css; no blur, see section 17),
+enters on the app's spring
 (`cubic-bezier(0.34, 1.42, 0.64, 1)`) and leaves faster and without overshoot —
 a bounce on the way out reads as indecision. The height collapse on `.out` is
 what slides the rest of the stack down. The countdown length is passed from JS
@@ -834,7 +845,8 @@ Tracked in `todo.md`; repeated here because they shape design choices.
 - The vault is **plain unencrypted JSON** under `userData`.
 - No vault backup or export.
 - Tag rename and recolour work in the model but have **no UI**.
-- Deleting a note has no undo and no confirmation. Deleting an event at least
+- Deleting a note or a journal asks first (js/dialog.js), but there is still no undo.
+  Deleting an event at least
   names it in a toast.
 - **Events accept `tagIds` in the model but there is no UI to set them.**
 - The schedule has no recurring or multi-day events, and a timed event cannot
@@ -857,7 +869,7 @@ Tracked in `todo.md`; repeated here because they shape design choices.
   only CSS. A shared `drawGrid` would remove it.
 - The homepage scrolls at small window heights now that the to-do card is
   bigger.
-- Settings has only an Appearance section. No text size, no data/vault
+- Settings has Appearance, Background and Sound. No text size, no data/vault
   controls, no account section.
 - Reminders reach Windows only. Nothing reaches a phone yet (§1).
 - No TypeScript, no linter; `scripts/check.js` is a hand-rolled runner.
@@ -905,6 +917,12 @@ worth doing before a paid release.
 | One pixel face for headings (Pixelify Sans) | user's call, 2026-10-23: a pixel face that reads in upper and lower case. Silkscreen (caps only) and VT323 were dropped |
 | Plex Mono stays the body font | readability over long text; the pixel face is for headings, labels and buttons |
 | The launch intro is a boot sequence, not the ring | the retro brief; a short skippable boot screen, then the logo moves into the brand mark |
+| Dark theme is the ethos website's palette | user's answer, 2026-10-23: "just like the ethos website". The site lives in `H:\ethos web\` |
+| Headings use one pixel face, Pixelify Sans | user's answer, 2026-10-23: upper and lower case, a general-purpose face. Silkscreen and VT323 dropped |
+| Typing sounds are synthesised and off by default | no audio files, no CSP change; a sound out of nowhere in a work app is a bad first impression |
+| Deleting a note or a journal asks first | the deletes cannot be undone, and the toast came after the fact |
+| The demo edition hides systems; main does not gate them yet | the renderer is untrusted. Entitlement checks belong in main when they exist (section 1) |
+| Installer is unsigned for now | user's answer, 2026-10-23: the app runs under Electron and gets a proper executable later |
 
 ---
 
@@ -914,8 +932,7 @@ worth doing before a paid release.
   of `<body>`, fixed, no z-index, `pointer-events: none`, so everything paints
   over it. `body[data-bg]` = off | gradient | image, `body[data-bg-scope]` =
   home | all. Always under a `--bg` veil (0.42 light / 0.5 dark / 0.72 image):
-  **that veil is the readability guarantee; do not weaken it.** Default is
-  gradient on the homepage. Gradient: palettes aurora / dawn / ocean / forest /
+  **that veil is the readability guarantee; do not weaken it.** Default is the desktop pattern, on every view (section 17). Gradient: palettes aurora / dawn / ocean / forest /
   dusk (light + dark variants in CSS via `body[data-bg-palette]`) or custom
   (three colours set inline as `--bd-a/b/c`, hex-validated), speed slow / normal
   / fast via `body[data-bg-speed]`. Image: eight bundled Unsplash presets in
@@ -1028,7 +1045,60 @@ journal notes are not in it.
 
 ---
 
-## 17. Start here (for the next session)
+## 17. Retro redesign and demo (2026-10-23)
+
+Plan and the user's answers: `PLAN-retro-demo.md` (its section 0a overrides the
+rest; section 6 there records what was done and what was left).
+
+- **Look.** Light is "98": grey faces, white fields, a navy accent. Dark is the
+  ethos website's palette (`ethos web/site/assets/ethos.css`). Radii are 0, except
+  the round clock face. Depth comes from bevels (`--bevel-out/in/field`), not
+  blurred shadows; no `backdrop-filter`. Status colours are `--danger`, `--ok`,
+  `--warn`. Section 3 "Themes and tokens" has the token list.
+- **Fonts.** `--font-ui` (IBM Plex Mono, body) and `--font-display` (Pixelify
+  Sans, headings, window titles, buttons). One pixel face, because it reads in
+  upper and lower case. Silkscreen and VT323 were dropped.
+- **Kit** (`styles/retro.css`). Defaults for `button` and fields are bevels. Also:
+  `.win`, `.win-title`, `.win-btn`, `.win-status`, `.menu`, `.menu-item`, `.group`,
+  `.tabs`, `.progress`, `.dither`, `.dlg-*`. Components override any default.
+- **Icons** (`js/icons.js`). 54 pixelarticons (MIT; `src/renderer/icons/`), built
+  into the module as path data, so nothing is fetched. `icon(name, size)` builds
+  the element; `hydrateIcons()` fills `[data-icon]` in the markup (the sidebar).
+- **Windows** (`js/chrome.js`). Every view gets a title bar (`HOME`, `TODO.EXE`,
+  …) with a hide-sidebar box and, away from Home, a close box. Every view except
+  Home gets a status row, filled from the state cache.
+- **Sidebar.** A Start menu: a raised panel, rows that go navy on hover, the
+  active row sunken.
+- **Backdrop.** A `pattern` mode is the default: teal desktop, dither, grid or
+  scanlines (Settings > Background). Scanlines (`#crt`) are optional and dark only.
+  Photos and gradients still work. The readability veil applies to images only.
+- **Dialogs.** `js/dialog.js` `confirmDialog()`. Note and journal deletes ask first.
+- **Motion** (`js/spring.js`, `retro.css`). The Spring is shared; the ink is its
+  default paint. Buttons press in and spring back. A view opens in three opacity
+  steps (opacity only, so fixed popovers keep their containing block).
+- **Typing sounds** (`js/sound.js`). Clicks synthesised with the Web Audio API, so
+  no audio ships and the CSP is unchanged. Off by default; a one-time toast offers
+  them; Settings > Sound has On/Off and a volume. The editors carry
+  `data-typing-sound`.
+- **Logo and intro.** `scripts/build-icons.py` makes every size from
+  `imgs/new logo [1].png`. The launch is a boot sequence (section 3).
+- **Demo edition** (`src/main/edition.js`). Default `demo`. `ETHOS_EDITION` overrides
+  it only in an unpackaged run (the test harness uses `full`). `state:load` reports
+  `edition`, `version` and `packaged`. Systems marked `data-full-only` (the Mood
+  log, its homepage card, Blockers) are hidden in the demo, and `views.show()`
+  sends a navigation to them Home. This decides only what the page shows; the
+  renderer is untrusted, so any real entitlement check must live in main.
+- **Installer.** `npm run dist` (electron-builder 26.15.3, NSIS, asar, en-GB and
+  en-US locales). Unsigned, on purpose for now. The packaged app runs; its data
+  folder is the same `%APPDATA%\Ethos` as the dev build, so a packaged run uses
+  the real vault.
+
+What is not done yet (section 6 of the plan): the journal menu bar, the notes
+folder grid, the clock restyle, the two-window to-do page, the settings tabs, the
+sliding sidebar highlight, the journal name in a window title, and the "alive"
+details of 7.4. The Windows banner has not been seen on a desktop.
+
+## 18. Start here (for the next session)
 
 Read in this order, and stop as soon as you have what you need. Only open a
 source file once a section here or in `Efficiencies.md` has sent you to it.
@@ -1060,7 +1130,7 @@ source file once a section here or in `Efficiencies.md` has sent you to it.
 | Backdrop / settings | none (local prefs) | `js/backdrop.js`, `js/settings.js` | `ui-test.js` background section |
 
 ### Rules for the next session
-- **Run `npm run check` (84 checks) and `npm run test:ui` (55 checks)** before
+- **Run `npm run check` (84 checks) and `npm run test:ui` (68 checks)** before
   and after any change. Use `env -u ELECTRON_RUN_AS_NODE` in VS Code terminals.
 - **Log every change here or in `progress.md`**, and every bug you notice in
   `bugs.md`, not inline.

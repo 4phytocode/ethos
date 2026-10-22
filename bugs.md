@@ -102,7 +102,7 @@ The round-trip probe uses `Date.UTC(y, …)`, and `Date.UTC` maps years 0–99 t
 1900–1999, so e.g. `0050-01-01` fails the `getUTCFullYear() !== y` check.
 Purely theoretical for a planner app.
 
-### 2.4 The context menu can render off-screen — `src/renderer/js/views.js` (cosmetic)
+### 2.4 The context menu can render off-screen — `src/renderer/js/views.js` (cosmetic; fixed 2026-10-23: clamped to the window)
 
 `showCtx()` positions the menu at raw `event.clientX/clientY` with no
 viewport clamping; a right-click near the right or bottom edge pushes it
@@ -369,7 +369,7 @@ restore call in main.
 A once-a-minute redraw runs only when the schedule is the current view. On
 return it redraws, so this is only visible if something else reads the list.
 
-### 7.9 Notes: no confirmation, no undo, temporary notes never expire — `notes.js` (gap)
+### 7.9 Notes: no confirmation, no undo, temporary notes never expire — `notes.js` (gap; confirmation added 2026-10-23, undo and expiry still open)
 
 Deleting a note is immediate (a toast names it). "Temporary" is only a label
 until the expiry rule is decided (todo.md).
@@ -380,7 +380,7 @@ The tree redraws on every snapshot. If a snapshot lands while a folder name is
 being edited (e.g. an autosave from the open note), the input is rebuilt from
 the stored name. Same class of bug as §6.6 in journals.
 
-### 7.11 Windows banners not verified by eye — `src/main/index.js` (gap)
+### 7.11 Windows banners not verified by eye — `src/main/index.js` (gap; still open on 2026-10-23: the packaged app runs, but no banner was seen)
 
 The scheduler's decision to raise one is tested (`npm run check`), and
 `setAppUserModelId('com.ethos.app')` is set, but the banner itself has not
@@ -579,7 +579,7 @@ Past roughly a thousand, use a Barnes–Hut quadtree.
 ### 11.9 Labels overlap in dense clusters (cosmetic)
 No label collision. Zooming in separates them; hovering lights one cluster.
 
-### 11.10 The keyboard path through the graph has no visible focus ring (a11y, cosmetic)
+### 11.10 The keyboard path through the graph has no visible focus ring (a11y, cosmetic; fixed 2026-10-23: a dotted focus outline is global)
 Tab moves through a visually hidden list; the focused note lights up and is
 centred, but the button itself is invisible. Fine for screen readers; a sighted
 keyboard user has only the highlight to go on.
@@ -604,3 +604,40 @@ before `capturePage` when the shot is evidence.
 - Clock running-total math, intro timeline, notification queue/pause logic,
   streak math, atomic-write path (temp → fsync → rename), and the migration
   runner all check out on inspection.
+
+---
+
+## 12. Found during the retro redesign (2026-10-23)
+
+Logged while building the redesign (PLAN-retro-demo.md). The first three were
+fixed in the same pass.
+
+### 12.1 The status row ran under the theme toggle (cosmetic, fixed)
+The fixed toggle at bottom left covered the last line of each view's status row. Fixed with bottom clearance on `.view-status`.
+
+### 12.2 Title text was almost invisible in dark mode (cosmetic, fixed)
+The title bar used `--accent-fg`, which is near-black in dark. It now uses `--title-fg`.
+
+### 12.3 Stray `-webkit-` fragments from the shadow sweep (logic, fixed)
+Removing `backdrop-filter` left a `-webkit-` with no value in `graph.css` and `notifications.css`. Both are fixed.
+
+### 12.4 The clock still has the old look (gap, open)
+PLAN 6.2 (round face, square hour marks, accent hands) is not done. `clock.js` draws the ticks.
+
+### 12.5 Journal, notes and to-do pages are not yet in their final layout (gap, open)
+Not done from PLAN phase 6: the journal menu bar (6.6), the notes folder grid (6.7), the two-window to-do page (6.4), the settings tabs (6.9), the schedule's mini-month and editor restyle (6.3, beyond the chrome). Each view is in the new look, but not the planned layout.
+
+### 12.6 Journal name is not in the title bar (gap, open)
+The journal's window title reads `JOURNAL.EXE` whatever the note is called (PLAN 5.1 asks for the note's name).
+
+### 12.7 The sidebar highlight does not slide (gap, open)
+PLAN 5.3 and 7.4: a single sliding highlight between rows. Rows jump.
+
+### 12.8 A packaged run and a dev run share one vault (risk, open)
+Both use `%APPDATA%\Ethos`. Testing the installer therefore touches the real vault. Consider a separate `app.setName` or a profile for packaged test runs before the demo goes out.
+
+### 12.9 Installer size is above the estimate (docs, open)
+Measured 114 MB installer and 337 MB unpacked, against the 80-95 MB estimate in Efficiencies.md. Most of it is the Electron runtime. The backgrounds (16 MB in asar) and WebP (Efficiencies Storage step 2) are the next step.
+
+### 12.10 `npm audit` reports issues after the electron-builder install (security, open)
+Not reviewed in this pass. Run `npm audit` and decide what to act on before the demo ships.

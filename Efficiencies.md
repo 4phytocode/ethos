@@ -295,10 +295,16 @@ Measured on disk, dev folder `H:\ethos` = **401 MB**.
 |---|---|---|---|
 | Dev folder (with node_modules) | ~401 MB | ~330 MB | locale pruning and removing dev-only folders. A fresh `npm install` restores node_modules (~380 MB), so this is a checkout size, not a shipped size. |
 | Packaged app, unpacked | ~385 MB | ~290 MB | locale pruning (-48 MB), backgrounds to WebP (-9 MB), removing unused DLLs (-7 to -27 MB) |
-| Packaged installer (compressed) | ~130 MB (est.) | **~80-95 MB** (est.) | electron-builder with asar and max compression. Electron's floor is roughly 75-80 MB. |
+| Packaged installer (compressed) | ~130 MB (est.) | **114 MB (measured 2026-10-23)** | electron-builder with asar and max compression. Electron's floor is roughly 75-80 MB. |
 | Route to a drastically smaller app | n/a | **~5-10 MB** | replace Electron with Tauri (system WebView2). Main-process code (vault, store, IPC) is plain JS and would need porting to Rust or a sidecar. This is a rewrite, not a tweak. |
 
 These are estimates, not measured builds. The first real build will settle them.
+
+**Measured 2026-10-23** (`npm run dist`, electron-builder 26.15.3, en-GB + en-US locales,
+asar with maximum compression): installer **114 MB**, `win-unpacked` **337 MB**, of which
+`app.asar` is 17 MB (backgrounds 16 MB). The locale prune removed the 48 MB of other
+locales as planned. The rest is the Electron runtime (`electron.exe` 234 MB, `dxcompiler.dll`
+26 MB). The installer is above the 80-95 MB estimate; see bugs.md 12.9.
 
 ### Steps, in order of payoff for effort
 

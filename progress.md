@@ -41,6 +41,13 @@ packaged. Full-only systems (Mood log, its card, Blockers) carry data-full-only:
 hidden in the demo and refused by views.show(). The window title is Ethos (demo).
 UI 68/68 (the test runs as full and checks the demo gate on the page).
 
+Installer (phase 9): `npm run dist` builds the NSIS installer (114 MB; 337 MB
+unpacked, measured). The packaged app runs and shows the demo. Docs (phase 10):
+CONTEXT section 17 (the retro redesign and the demo), bugs section 12 (what was
+found, what is open), Efficiencies measured, todo, and PLAN-retro-demo section 6
+(execution record). Open: the Windows banner, the intro and tray on a desktop,
+the packaged vault (bugs 12.8), npm audit (bugs 12.10).
+
 Component kit (phase 4): styles/retro.css (buttons and fields default to bevels;
 window, menu, group, tabs, progress, dither, dialog), js/icons.js (54 pixel
 icons, copied into the module from icons/*.svg, MIT), js/dialog.js
