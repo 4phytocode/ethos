@@ -30,7 +30,7 @@
 
 /* === Header === */
 .jr-head { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-.jr-head h1 { font-size: 32px; font-weight: 600; margin: 0; letter-spacing: -0.02em; }
+.jr-head h1 { font-size: 33px; font-weight: 700; margin: 0; }
 
 .new-page-btn { align-self: flex-start; padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius);
                 background: transparent; color: var(--muted); font-family: inherit; font-size: 13px;

@@ -57,7 +57,8 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
   background: var(--title-bg);
   color: var(--title-fg);
   font-family: var(--font-display);
-  font-size: 16px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
   user-select: none;
 }
@@ -108,6 +109,8 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
 /* Each view's title bar. The brand mark is fixed over the top left, so the
    title text starts clear of it. */
 .view-titlebar { margin: 0 0 14px; padding-left: 56px; }
+/* Home is a two-column grid; its title bar spans both columns. */
+#home > .view-titlebar { grid-column: 1 / -1; }
 .view-status {
   margin: 14px 0 56px;   /* clears the theme toggle, fixed at the bottom left */
   padding: 3px 8px;
@@ -164,7 +167,8 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
   background: var(--face);
   color: var(--fg);
   font-family: var(--font-display);
-  font-size: 14px;
+  font-size: 11px;
+  font-weight: 700;
   line-height: 1;
 }
 

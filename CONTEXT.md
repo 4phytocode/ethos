@@ -330,7 +330,10 @@ Colours, borders and fonts come from custom properties on `:root` (light) and
 they never write a colour that a theme should own.
 
 - **Light is "98":** grey page and window faces (`--bg`, `--face`), white fields
-  (`--field`, `--card`), 1px grey borders (`--line`), a navy accent (`--accent`).
+  (`--field`, `--card`), 1px grey borders (`--line`), black text (`--muted` is black too), a deep teal
+  accent (`--accent`) and pale green title bars, so nothing clashes with the teal
+  desktop. Every view is an opaque window on the desktop, so no text sits on the
+  pattern (user's call, 2026-10-23: grey text on teal was unreadable).
 - **Dark is the ethos website's palette** (tube black, phosphor blue-white), taken
   from `H:\ethos web\site\assets\ethos.css`.
 - **Square corners.** `--radius` is 0. The round clock face is the one exception.
@@ -340,8 +343,9 @@ they never write a colour that a theme should own.
   outlines (`0 0 0 1.5px`) remain.
 - **Status colours** are tokens too: `--danger`, `--ok`, `--warn`. Event colours
   stay on the tag palette (`TAG_COLORS`).
-- **Fonts:** `--font-ui` (Plex Mono, body), `--font-display` (Pixelify Sans,
-  headings). Pixelify Sans is the pixel face because it reads in upper and lower
+- **Fonts:** `--font-ui` (Plex Mono, body), `--font-display` (Ethos Pixel Sans, a
+  pixel MS Sans Serif recreation, CC BY-SA; see `fonts/README.md`), set at 11,
+  22 or 33px. Pixelify Sans is the fallback and a body choice in Settings. Pixelify Sans is the pixel face because it reads in upper and lower
   case; Silkscreen and VT323 were considered and dropped (PLAN-retro-demo.md, 0a).
 - Keyboard focus is a 1px dotted outline inside the control (`base.css`).
 
@@ -923,6 +927,8 @@ worth doing before a paid release.
 | Deleting a note or a journal asks first | the deletes cannot be undone, and the toast came after the fact |
 | The demo edition hides systems; main does not gate them yet | the renderer is untrusted. Entitlement checks belong in main when they exist (section 1) |
 | Installer is unsigned for now | user's answer, 2026-10-23: the app runs under Electron and gets a proper executable later |
+| Headings use Ethos Pixel Sans (a pixel MS Sans Serif recreation) | user's call, 2026-10-23: Pixelify was off-putting. CC BY-SA 3.0, attribution in fonts/README.md. Supersedes the Pixelify row above |
+| Light mode: black text, teal accent, pale green title bars, views as opaque windows | user's call, 2026-10-23: grey text on the teal desktop was unreadable, and navy clashed with the teal |
 
 ---
 
@@ -1050,13 +1056,16 @@ journal notes are not in it.
 Plan and the user's answers: `PLAN-retro-demo.md` (its section 0a overrides the
 rest; section 6 there records what was done and what was left).
 
-- **Look.** Light is "98": grey faces, white fields, a navy accent. Dark is the
+- **Look.** Light is "98": grey faces, white fields, black text, a teal accent, pale
+  green title bars, and every view an opaque window on the teal desktop. Dark is the
   ethos website's palette (`ethos web/site/assets/ethos.css`). Radii are 0, except
   the round clock face. Depth comes from bevels (`--bevel-out/in/field`), not
   blurred shadows; no `backdrop-filter`. Status colours are `--danger`, `--ok`,
   `--warn`. Section 3 "Themes and tokens" has the token list.
-- **Fonts.** `--font-ui` (IBM Plex Mono, body) and `--font-display` (Pixelify
-  Sans, headings, window titles, buttons). One pixel face, because it reads in
+- **Fonts.** `--font-ui` (IBM Plex Mono, body) and `--font-display` (Ethos Pixel
+  Sans: a pixel MS Sans Serif recreation for headings, window titles and toast
+  titles; 33px h1, 22px h2, 11px bold in title bars). It replaced Pixelify Sans on
+  2026-10-23. One pixel face, because it reads in
   upper and lower case. Silkscreen and VT323 were dropped.
 - **Kit** (`styles/retro.css`). Defaults for `button` and fields are bevels. Also:
   `.win`, `.win-title`, `.win-btn`, `.win-status`, `.menu`, `.menu-item`, `.group`,

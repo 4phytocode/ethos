@@ -2,7 +2,7 @@
    homepage card. */
 
 #todo-page { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
-#todo-page h1 { font-size: 36px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+#todo-page h1 { font-size: 33px; font-weight: 700; margin: 0; }
 
 /* === Tick box ===
    Empty it is an outlined square. Done, it fills solid with the foreground
@@ -70,7 +70,7 @@
 .td-col { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius);
           border: 1px solid var(--line); background: var(--card); }
 .td-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.td-col-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.td-col-head h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .td-col-hint { font-size: 11px; color: var(--muted); }
 .td-rem-add input { width: 100%; padding: 9px 12px; border: 1px dashed var(--line); border-radius: var(--radius);
   background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; outline: none;

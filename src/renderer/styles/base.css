@@ -18,14 +18,14 @@
   --face: #c0c0c0;      /* bars, buttons, sidebar */
   --field: #ffffff;     /* inputs, editors, lists */
   --fg: #000000;
-  --muted: #404040;     /* readable on --bg and --field */
+  --muted: #000000;     /* secondary text is black in light: grey read poorly on the faces */
   --line: #808080;      /* 1px borders */
   --card: #ffffff;
   --hover: #dcdcdc;
-  --accent: #000080;    /* selection, title bars, the one accent */
-  --accent-2: #1084d0;  /* far end of the title-bar gradient only */
+  --accent: #005f5f;    /* selection and hover: a deep teal, the desktop's family */
+  --accent-2: #c4e6e6;  /* far end of the title-bar gradient only */
   --accent-fg: #ffffff;
-  --title-fg: #ffffff;  /* text on the title bar gradient */
+  --title-fg: #000000;  /* black on the pale green title bars */
   --danger: #e81123;    /* destructive actions only */
   --ok: #008000;
   --warn: #8a5a00;      /* overdue, attention; readable on white */
@@ -37,10 +37,10 @@
                inset -2px -2px var(--hi-2), inset 2px 2px var(--lo);
   --bevel-field: inset -1px -1px var(--hi), inset 1px 1px var(--lo),
                  inset -2px -2px var(--hi-2), inset 2px 2px var(--lo-2);
-  --title-bg: linear-gradient(90deg, var(--accent), var(--accent-2));
+  --title-bg: linear-gradient(90deg, #7fc8c8, var(--accent-2));   /* a lighter green than the desktop */
   --radius: 0;
   --glow: none;
-  --font-display: 'Pixelify Sans', var(--font-ui, system-ui), sans-serif;
+  --font-display: 'Ethos Pixel Sans', 'Pixelify Sans', var(--font-ui, system-ui), sans-serif;
 }
 body.dark {
   --bg: #05070b; --face: #0e1116; --field: #05070b;
@@ -117,10 +117,15 @@ body.sb-hidden { --sb-w: 0px; }
 .view { display: none; position: absolute; top: 14px; bottom: 14px; left: 0; right: var(--sb-w);
         overflow-y: auto; transition: right 0.46s cubic-bezier(0.34, 1.2, 0.64, 1); }
 .view.active { display: flex; }
+/* Light mode: each view is an opaque window on the teal desktop, so no text sits
+   on the pattern; the desktop shows as a margin around it. Dark keeps the old
+   layout, where the desktop and the page are the same near-black. */
+body:not(.dark) .view { left: 12px; right: calc(var(--sb-w) + 12px);
+                        background: var(--face); box-shadow: var(--bevel-out); }
 
 /* === Homepage === */
 #home { flex-direction: column; padding: 80px 36px 56px; gap: 28px; }
-#home h1 { font-size: 36px; font-weight: 700; margin: 0 0 8px; }
+#home h1 { font-size: 33px; font-weight: 700; margin: 0 0 8px; }
 /* Takes the space left between the heading and the habit bar. */
 /* Clock on the left, to-do card beside it. */
 .home-row { display: flex; align-items: center; gap: 48px; flex-wrap: wrap; }
@@ -148,7 +153,7 @@ body.sb-hidden { --sb-w: 0px; }
 
 /* === Placeholder pages === */
 .placeholder { flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
-.placeholder h2 { margin: 0; font-size: 28px; font-weight: 700; }
+.placeholder h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .placeholder p { margin: 0; color: var(--muted); }
 
 /* === Light / dark toggle, bottom left ===

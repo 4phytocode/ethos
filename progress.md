@@ -3,6 +3,15 @@
 Short log, newest first. Details live in CONTEXT.md (what and why) and bugs.md
 (what is broken). Read those two before opening source files.
 
+## 2026-10-23 (later): light mode readability, pixel MS Sans Serif headings
+User feedback before launch. Light mode: secondary text is black (was #404040),
+the accent is a deep teal and the title bars a pale green with black text (the
+navy clashed with the teal desktop), and every view is an opaque grey window on
+the desktop, so no text sits on the teal. Headings use Ethos Pixel Sans, a pixel
+recreation of MS Sans Serif (FontStruct, by lou, CC BY-SA 3.0, via 98.css), at
+33 / 22 / 11px. Dark mode keeps its colours and takes the new heading face.
+Checks 84/84, UI 68/68.
+
 ## 2026-10-23: housekeeping (retro plan, phase 1)
 Branch `retro-demo`. The redesign and demo plan is in PLAN-retro-demo.md, with
 the user's answers in its section 0a. Prompts: the 50 gratitude prompts from

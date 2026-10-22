@@ -4,7 +4,7 @@
 #notes-page { flex-direction: column; padding: 64px 48px 48px; }
 
 .nt-home { width: 100%; max-width: 860px; display: flex; flex-direction: column; gap: 16px; }
-.nt-home h1 { margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -0.02em; }
+.nt-home h1 { margin: 0; font-size: 33px; font-weight: 700; }
 .nt-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .nt-btn { height: 32px; padding: 0 14px; border: 1px solid var(--line); border-radius: var(--radius);
           background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; cursor: pointer;

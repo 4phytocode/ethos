@@ -54,7 +54,7 @@
 .sc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .sc-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
            flex-wrap: wrap; padding-bottom: 14px; }
-.sc-title { margin: 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; }
+.sc-title { margin: 0; font-size: 22px; font-weight: 700; white-space: nowrap; }
 .sc-controls { display: flex; align-items: center; gap: 8px; }
 
 .sc-btn { height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: var(--radius);

@@ -1,12 +1,12 @@
 /* Settings. One column of sections, each a titled block of rows. */
 
 #settings-page { flex-direction: column; padding: 56px 36px 56px; gap: 10px; }
-#settings-page h1 { font-size: 36px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+#settings-page h1 { font-size: 33px; font-weight: 700; margin: 0; }
 .set-intro { margin: 0 0 14px; font-size: 13px; color: var(--muted); }
 
 .set-section { max-width: 760px; padding: 20px 22px; border: 1px solid var(--line);
                border-radius: var(--radius); background: var(--card); margin-bottom: 16px; }
-.set-section h2 { margin: 0; font-size: 16px; font-weight: 700; }
+.set-section h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .set-section-sub { margin: 4px 0 18px; font-size: 12px; color: var(--muted); }
 
 .set-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px;
