@@ -1,0 +1,67 @@
+/* The Timer page (js/timer.js). The form is a group box; each timer is a small
+   window with a sunken readout, a block progress bar and its controls. */
+
+#timer-page { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
+#timer-page h1 { font-size: 33px; font-weight: 700; margin: 0; }
+.tm-sub { margin: 0; max-width: 560px; font-size: 13px; line-height: 1.5; color: var(--muted); }
+
+/* ---- the form ---- */
+
+/* The face behind the form keeps the group label's backing the same colour as
+   the box, in dark too, where the view itself is see-through. */
+.tm-form { display: flex; flex-direction: column; gap: 12px; max-width: 880px;
+           margin-top: 10px; padding: 18px 12px 12px; background: var(--face); }
+.tm-presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.tm-preset { padding: 4px 10px; font-size: 12px; }
+
+.tm-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.tm-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
+.tm-field input { width: 76px; padding: 6px 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tm-field-name { flex: 1 1 220px; }
+.tm-field-name input { width: 100%; box-sizing: border-box; }
+
+.tm-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+/* The error doubles as the spacer that pushes the submit button right. */
+.tm-error { flex: 1 1 auto; min-width: 0; font-size: 12px; color: var(--danger); }
+.tm-cancel { padding: 6px 14px; font-size: 13px; }
+.tm-cancel[hidden] { display: none; }
+.tm-submit { padding: 6px 18px; font-size: 13px; font-weight: 600;
+             box-shadow: var(--bevel-out), 0 0 0 1px var(--fg); }
+
+/* An on/off switch is a button that stays pressed in while it is on. */
+.tm-toggle { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px;
+             font-size: 13px; color: var(--muted); opacity: 0.7; }
+.tm-toggle[aria-pressed="true"] { background: var(--field); color: var(--fg); opacity: 1;
+                                  box-shadow: var(--bevel-in); }
+.tm-toggle:active:not(:disabled) { transform: none; }
+
+/* ---- the timers ---- */
+
+.tm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px;
+           max-width: 880px; margin: 4px 0 0; padding: 0; list-style: none; }
+.tm-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px 8px; }
+
+.tm-face { display: flex; flex-direction: column; align-items: center; gap: 4px;
+           padding: 14px 8px 8px; background: var(--field); box-shadow: var(--bevel-field); }
+/* The pixel face is drawn on an 11px grid, so the readout is 33px. */
+.tm-time { font-family: var(--font-display); font-size: 33px; line-height: 1;
+           font-variant-numeric: tabular-nums; color: var(--fg); }
+.tm-running .tm-time { color: var(--accent); }
+.tm-done .tm-time { color: var(--warn); }
+.tm-ringing .tm-time { animation: tm-blink 1s steps(1, end) infinite; }
+@keyframes tm-blink { 50% { opacity: 0; } }
+.tm-state { font-size: 11px; color: var(--muted); }
+
+.tm-controls { display: flex; align-items: center; gap: 6px; }
+.tm-go { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+         min-width: 100px; padding: 5px 12px; font-size: 13px; }
+.tm-reset, .tm-edit, .tm-toggle-icon { display: grid; place-items: center; width: 30px; height: 28px;
+                                       padding: 0; }
+.tm-grow { flex: 1; }
+
+.tm-empty { margin: 0; font-size: 13px; color: var(--muted); }
+.tm-empty[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tm-ringing .tm-time { animation: none; }
+}

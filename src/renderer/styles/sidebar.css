@@ -109,3 +109,9 @@ body.sb-hidden .back { right: 52px; }
 @media (prefers-reduced-motion: reduce) {
   .sidebar, .sidebar-btn, .sb-caret, .sb-kids, .sb-show, .view { transition-duration: 0.01ms; }
 }
+
+/* The time left on the next timer to ring, beside Timer (js/timer.js). */
+.sb-badge { margin-left: auto; padding: 1px 5px; font-size: 11px; font-weight: 500;
+            font-variant-numeric: tabular-nums; background: var(--field); color: var(--fg);
+            box-shadow: var(--bevel-field); }
+.sb-badge[hidden] { display: none; }

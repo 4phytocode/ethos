@@ -11,6 +11,7 @@ const path = require('path');
 
 const { Vault } = require('../src/main/vault');
 const { Store } = require('../src/main/store');
+const { Timers, MAX_TIMERS } = require('../src/main/timers');
 const { ValidationError, TAG_COLORS, SCHEMA_VERSION, MAX_DONE_DATES } = require('../src/main/schema');
 
 let passed = 0;
@@ -1085,6 +1086,63 @@ async function main() {
     assert.throws(() => store.setMood({ date: TODAY, feeling: 'note', text: '  ' }, NOW), ValidationError);
     assert.throws(() => store.setMood({ date: '2999-01-01', feeling: 'good' }, NOW), ValidationError);
     assert.throws(() => store.setMood({ date: TODAY, feeling: 'good', text: 'x'.repeat(281) }, NOW), ValidationError);
+  });
+
+  console.log('\ntimers');
+
+  // Each test stops its Timers, so no timeout outlives it.
+  const withTimers = async (fn) => {
+    const rung = [];
+    const timers = new Timers({ ring: (t) => rung.push(t), now: () => NOW });
+    try { await fn(timers, rung); } finally { timers.stop(); }
+  };
+
+  await test('a timer rings once, at its end, with its label and banner choice', () => withTimers((timers, rung) => {
+    timers.arm('tea', { endsAt: NOW + 5000, label: 'Tea', notify: true }, NOW);
+    assert.strictEqual(timers.tick(NOW + 4999).length, 0, 'not yet');
+    assert.strictEqual(timers.tick(NOW + 5000).length, 1);
+    assert.deepStrictEqual(rung, [{ id: 'tea', label: 'Tea', notify: true }]);
+    assert.strictEqual(timers.tick(NOW + 9000).length, 0, 'never twice');
+    assert.strictEqual(timers.hasArmed(), false);
+  }));
+
+  await test('arming again replaces a timer; disarm and clear forget it', () => withTimers((timers, rung) => {
+    timers.arm('a', { endsAt: NOW + 1000, label: '', notify: false }, NOW);
+    timers.arm('a', { endsAt: NOW + 8000, label: '', notify: false }, NOW);
+    assert.strictEqual(timers.tick(NOW + 2000).length, 0, 'the later end wins');
+    timers.disarm('a');
+    timers.arm('b', { endsAt: NOW + 1000, label: '', notify: false }, NOW);
+    timers.clear();
+    assert.strictEqual(timers.tick(NOW + 10000).length, 0);
+    assert.strictEqual(rung.length, 0);
+  }));
+
+  await test('bad timer input is rejected', () => withTimers((timers) => {
+    const ok = { endsAt: NOW + 1000, label: 'x', notify: true };
+    assert.throws(() => timers.arm('Bad Id', ok, NOW), ValidationError);
+    assert.throws(() => timers.arm('a'.repeat(33), ok, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', null, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, endsAt: 'soon' }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, endsAt: NOW + 101 * 3600 * 1000 }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, label: 'x'.repeat(41) }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, notify: 'yes' }, NOW), ValidationError);
+    assert.throws(() => timers.disarm(42), ValidationError);
+    for (let i = 0; i < MAX_TIMERS; i += 1) timers.arm('t' + i, ok, NOW);
+    assert.throws(() => timers.arm('onemore', ok, NOW), ValidationError);
+    timers.arm('t0', ok, NOW);   // re-arming one already held is still fine
+  }));
+
+  await test('a ring that throws is not rung again', async () => {
+    let calls = 0;
+    const timers = new Timers({ ring: () => { calls += 1; throw new Error('page gone'); }, now: () => NOW });
+    const quiet = console.error;
+    console.error = () => {};
+    try {
+      timers.arm('x', { endsAt: NOW, label: '', notify: false }, NOW);
+      timers.tick(NOW);
+      timers.tick(NOW + 60000);
+    } finally { console.error = quiet; timers.stop(); }
+    assert.strictEqual(calls, 1);
   });
 
   console.log('\n' + passed + ' passed, ' + failures.length + ' failed');

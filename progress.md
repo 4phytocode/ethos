@@ -3,6 +3,15 @@
 Short log, newest first. Details live in CONTEXT.md (what and why) and bugs.md
 (what is broken). Read those two before opening source files.
 
+## 2026-10-23 (evening): Timer page
+User's call: customisable timers with an alarm option and a notification
+option. New view (sidebar: Timer) with a group-box form and one small window per
+timer. Deadlines are held in main (`src/main/timers.js`, IPC `timers:arm` /
+`timers:disarm`, event `timer-done`), so a timer rings with the window hidden; a
+running timer keeps Ethos in the tray and raises the window when it rings. The
+list itself is per-machine, in localStorage. Alarm is a synthesised beeper in
+`sound.js`. CONTEXT.md section 19. Checks 88/88, UI 89/89.
+
 ## 2026-10-23 (late): intro is boot text, then the e and ring
 User's call. The boot lines stay; after them the original big e returns with
 its ring drawn round it, and shrinks into the small "•e" mark at the top left

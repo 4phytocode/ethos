@@ -10,6 +10,7 @@ const { Vault } = require('./vault');
 const { Store } = require('./store');
 const ipc = require('./ipc');
 const { Reminders } = require('./reminders');
+const { Timers } = require('./timers');
 const { ensureTray, destroyTray } = require('./tray');
 
 const RENDERER_ROOT = path.join(__dirname, '..', 'renderer');
@@ -40,9 +41,11 @@ if (process.platform === 'win32') app.setAppUserModelId('com.ethos.app');
 let store = null;
 let mainWindow = null;
 let reminders = null;
+let timers = null;
 
 // Closing the window does not always mean quitting: while a to-do still has a
-// reminder to deliver, the window hides to the tray and Ethos keeps running.
+// reminder to deliver, or a timer is running, the window hides to the tray and
+// Ethos keeps running.
 let isQuitting = false;
 let hiddenToTray = false;
 let toldAboutBackground = false;
@@ -180,7 +183,7 @@ function createWindow() {
       return;
     }
     committed = false;   // the next close asks the page again
-    if (isQuitting || !store || !store.hasUpcomingReminders()) return;
+    if (isQuitting || !store || !(store.hasUpcomingReminders() || (timers && timers.hasArmed()))) return;
     event.preventDefault();
     win.hide();
     hiddenToTray = true;
@@ -188,7 +191,7 @@ function createWindow() {
     if (!toldAboutBackground) {
       toldAboutBackground = true;
       osNotify('Ethos is still running',
-        'It stays in the background so it can remind you. Quit it from the tray icon.');
+        'It stays in the background so your reminders and timers still go off. Quit it from the tray icon.');
     }
   });
 
@@ -222,7 +225,18 @@ app.whenReady().then(async () => {
   // beat for its listener to attach. Starting it earlier would deliver any
   // overdue reminder into a page that is not there yet.
   let remindersStarted = false;
+  // A timer that runs out raises the window if it was hidden to the tray: the
+  // user asked to be interrupted, and the page is where the alarm and the
+  // toast are. The Windows banner is the timer's own option.
+  timers = new Timers({
+    ring: (t) => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('timer-done', { id: t.id });
+      if (t.notify) osNotify("Time's up", t.label || 'Your timer has finished.');
+      if (hiddenToTray) showWindow();
+    },
+  });
   ipc.register(store, {
+    timers,
     onRendererReady: () => {
       if (remindersStarted) return;
       remindersStarted = true;
@@ -244,9 +258,9 @@ app.whenReady().then(async () => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('event-reminder', ev);
     },
     osNotifyEvent: (ev) => osNotify(ev.title, 'Starts at ' + clockText(ev.startMinute)),
-    // Once the window is hidden and every reminder has been delivered there is
-    // no reason left to stay alive.
-    onIdle: () => { if (hiddenToTray) quitForReal(); },
+    // Once the window is hidden, every reminder has been delivered and no timer
+    // is running, there is no reason left to stay alive.
+    onIdle: () => { if (hiddenToTray && !timers.hasArmed()) quitForReal(); },
   });
 
   app.on('activate', showWindow);
@@ -258,6 +272,7 @@ let quitting = false;
 app.on('before-quit', (event) => {
   isQuitting = true;
   if (reminders) reminders.stop();
+  if (timers) timers.stop();
   destroyTray();
   // The second pass, re-entered by the app.quit() below, lets the quit through.
   if (quitting || !store || !store.hasPendingWrites) return;

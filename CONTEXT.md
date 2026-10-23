@@ -65,11 +65,12 @@ anything under `src/main`.**
 src/main/        the only code that touches disk or holds authoritative state
   index.js       app lifecycle, BrowserWindow, security posture
   protocol.js    the app://ethos scheme, CSP, path containment
-  ipc.js         the 25 IPC handlers, each wrapped in an { ok, error } envelope
+  ipc.js         the 27 IPC handlers, each wrapped in an { ok, error } envelope
   store.js       authoritative state + mutations + debounced saving
   vault.js       atomic disk I/O, the on-disk layout, quarantine
   schema.js      validation and migrations, shared by disk and IPC
   reminders.js   to-do and event reminder scheduler (no electron import; testable in node)
+  timers.js      rings the Timer page's timers (no electron import; testable in node)
   tray.js        tray icon (assets/tray-16.png), so Ethos can run with its window closed
   edition.js     demo or full; the page hides what the edition lacks (section 17)
 
@@ -78,7 +79,7 @@ src/preload/
 
 src/renderer/    rendering only; no fs, no business logic, no authority
   index.html
-  styles/        base, clock, intro, journals, tags, todo, habits, settings,
+  styles/        base, clock, intro, journals, tags, todo, habits, timer, settings,
                  sidebar, schedule, notes, graph, notifications, backdrop, home, prompts, fonts, quote
   js/
     app.js           entry point: load state, then wire views
@@ -92,6 +93,7 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     journal-streak.js  contribution grid + the daily goal toast
     todo.js          to-do page, homepage card, tick box, reminder toast
     habits.js        habit tracker: grid, today's tick boxes, daily goal toast
+    timer.js         Timer page: countdowns, alarm, sidebar badge (section 19)
     clock.js         homepage clock: ticks, hands, readout
     settings.js      appearance prefs, font registry, Settings UI
     tags.js          tag row, create panel, reuse picker
@@ -104,11 +106,11 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     prompts-data.js  the Gratitude and "Surprise me" prompt lists
     quotes.js        the homepage quote list (see "Homepage quote")
     todo-parse.js    typed times in the to-do input (pure, no DOM)
-    icons.js         the 54 pixel icons, built from path data (no runtime fetch)
+    icons.js         the 58 pixel icons, built from path data (no runtime fetch)
     dialog.js        confirmDialog(): the retro modal for deletes
     chrome.js        title bar and status row for every view
     spring.js        the shared under-damped Spring (the ink is its default paint)
-    sound.js         typing clicks (Web Audio, off by default)
+    sound.js         typing clicks (Web Audio, off by default) and the timer alarm
     (styles/retro.css is the shared component kit; see section 17)
 
 renderer/fonts/       IBM Plex Mono, OFL; the licence texts are alongside
@@ -568,7 +570,7 @@ quarantined file is never re-read.
 
 ## 7. IPC surface
 
-Twenty-five channels. Each returns `{ ok: true, ... }` or `{ ok: false, error }`;
+Twenty-seven channels. Each returns `{ ok: true, ... }` or `{ ok: false, error }`;
 the preload unwraps that into a normal promise, so renderer code uses
 try/catch. Exceptions never cross the bridge — a main-process stack is not
 something a renderer should see.
@@ -600,13 +602,16 @@ something a renderer should see.
 | `pages:create` | `ethos.pages.create({folderId, temporary})` | `page` + snapshot |
 | `pages:update` | `ethos.pages.update(id, patch)` | `page` + snapshot (patch may carry `links`) |
 | `pages:delete` | `ethos.pages.remove(id)` | `deleted` + snapshot |
+| `timers:arm` | `ethos.timers.arm(id, {endsAt, label, notify})` | nothing (main holds the deadline; section 19) |
+| `timers:disarm` | `ethos.timers.disarm(id)` | nothing |
 
 `events:create` / `events:update` also take `color` and `remindMinutes`.
 
-There are two **main to page** events. `reminder` (to-dos), exposed as
+There are three **main to page** events. `reminder` (to-dos), exposed as
 `ethos.onReminder(callback)`, hands over `id`, `title`, `minutes`.
 `event-reminder` (schedule), exposed as `ethos.onEventReminder(callback)`,
-hands over `id`, `title`, `date`, `startMinute`. Plain data only: the IPC
+hands over `id`, `title`, `date`, `startMinute`. `timer-done`, exposed as
+`ethos.onTimerDone(callback)`, hands over `id`. Plain data only: the IPC
 event object, and with it the sender, never crosses. Both return an
 unsubscribe function.
 
@@ -666,9 +671,10 @@ deliver a reminder that came due while the app was closed into a page that had
 not loaded, and it would be marked sent and lost.
 
 **Closing the window** hides it to the tray only while a reminder is still
-pending (`store.hasUpcomingReminders()`); otherwise the app quits as before.
-Once the window is hidden and nothing is left to remind about, the app quits
-by itself (`onIdle`). `webPreferences.backgroundThrottling` is `false`, since a
+pending (`store.hasUpcomingReminders()`) or a timer is running
+(`timers.hasArmed()`); otherwise the app quits as before. Once the window is
+hidden, nothing is left to remind about and no timer runs, the app quits by
+itself (`onIdle`). A timer that rings while the window is hidden brings it back. `webPreferences.backgroundThrottling` is `false`, since a
 hidden page is exactly when it is being relied on. The tray icon is drawn in
 `tray.js` with zlib rather than shipped as a file. Quit for real from the tray
 menu. `isQuitting` is set first thing in `before-quit`, which is what lets the
@@ -930,6 +936,8 @@ worth doing before a paid release.
 | Deleting a note or a journal asks first | the deletes cannot be undone, and the toast came after the fact |
 | The demo edition hides systems; main does not gate them yet | the renderer is untrusted. Entitlement checks belong in main when they exist (section 1) |
 | Installer is unsigned for now | user's answer, 2026-10-23: the app runs under Electron and gets a proper executable later |
+| Timers live in localStorage; their deadlines in main | user's call, 2026-10-23: a timer page with alarms and notifications. A timer list is per-machine, like Settings; the deadline is in main so it rings with the window hidden |
+| A finished timer always shows the in-app toast; the Windows banner and the alarm are per-timer switches | the user asked for an alarm option and a notification option. A timer that rings while hidden in the tray raises the window |
 | Headings use Ethos Pixel Sans (a pixel MS Sans Serif recreation) | user's call, 2026-10-23: Pixelify was off-putting. CC BY-SA 3.0, attribution in fonts/README.md. Supersedes the Pixelify row above |
 | Light mode: black text, teal accent, pale green title bars, views as opaque windows | user's call, 2026-10-23: grey text on the teal desktop was unreadable, and navy clashed with the teal |
 
@@ -1141,9 +1149,10 @@ source file once a section here or in `Efficiencies.md` has sent you to it.
 | Note links / graph | `pages:update` (`links`), `store.deletePage` | `js/notes.js`, `js/graph.js` | `check.js` note links, `ui-test.js` graph section |
 | Prompts / paper | none (local prefs) | `js/prompts.js`, `js/prompts-data.js` | `ui-test.js` journal section |
 | Backdrop / settings | none (local prefs) | `js/backdrop.js`, `js/settings.js` | `ui-test.js` background section |
+| Timer | `src/main/timers.js`, IPC `timers:*` | `js/timer.js` (list in localStorage) | `check.js` timers, `ui-test.js` timer section |
 
 ### Rules for the next session
-- **Run `npm run check` (84 checks) and `npm run test:ui` (68 checks)** before
+- **Run `npm run check` (88 checks) and `npm run test:ui` (89 checks)** before
   and after any change. Use `env -u ELECTRON_RUN_AS_NODE` in VS Code terminals.
 - **Log every change here or in `progress.md`**, and every bug you notice in
   `bugs.md`, not inline.
@@ -1157,3 +1166,41 @@ source file once a section here or in `Efficiencies.md` has sent you to it.
 - Packaging: Electron with electron-builder (about 80-95 MB installer) or a
   rewrite to Tauri (about 5-10 MB). See Efficiencies.md.
 
+## 19. Timer (2026-10-23)
+
+User's call: "a simple timer system which includes various customisable timers,
+an alarm option and notification option to alert the user once time is up", in
+the same retro layout as the rest of the app. In the demo edition too.
+
+- **Page** (`#timer-page`, `js/timer.js`, `styles/timer.css`). A "New timer" group
+  box (name, hours / minutes / seconds, quick lengths 1 min to 1 hour, Alarm and
+  Notification switches, which are buttons with `aria-pressed`), then one small
+  window per timer: a sunken readout in the pixel face at 33px, a block progress
+  bar, Start / Pause / Resume, Reset, Edit, and the two switches. Delete is the
+  title bar's close box. Up to 50 timers, each up to 99:59:59. Editing a timer
+  puts it back to idle at its new length.
+- **States.** idle, running (`endsAt`, wall-clock ms), paused (`left`, ms), done.
+  The list is in `localStorage['ethos.timers']` (`{ v: 1, timers }`), cleaned on
+  load: anything malformed is dropped. Per-machine, like Settings.
+- **Who rings it.** `src/main/timers.js` holds each running timer's deadline,
+  armed by the page (`timers:arm`) and disarmed on pause, reset, edit or delete.
+  One timeout for the next deadline, never longer than a minute, so a machine
+  that slept is caught within a minute. On `timer-done` the page marks it done,
+  shows the "Time's up" toast (always), starts the alarm if that timer's alarm is
+  on, and main raises the Windows banner if its notification is on. Main forgets
+  every timer on `state:load`; the page arms its running timers again, so a timer
+  the page no longer has cannot ring.
+- **Restart.** A timer still to come is armed again. One that ran out while Ethos
+  was closed is shown as done, without an alarm, with one toast listing them.
+- **Alarm** (`sound.js` `startAlarm` / `stopAlarm`). Four square-wave beeps every
+  1.4s, synthesised, for up to a minute. It follows the Settings volume with a
+  floor of 20%, and plays whatever the typing-sound setting is. With the alarm on,
+  the toast stays up with "Stop alarm"; the card's button reads Stop.
+- **Badge.** While a timer runs, the sidebar's Timer row shows the time left on
+  the next one to ring. The ticker (250ms) runs only while something is running,
+  and rewrites the readouts only while the page is open.
+- **Status row.** "N running · N finished", or the count. Timers are not in the
+  vault, so `timer.js` fires `ethos:timers` on the document and `chrome.js`
+  redraws the row.
+- **Icons.** `play`, `pause`, `notification` and `hourglass` added from
+  pixelarticons 1.8.1 (same MIT set).

@@ -281,6 +281,63 @@ async function run() {
   check('turning typing sounds off is kept', await until(`JSON.parse(localStorage.getItem('ethos.sound')).typing === false`));
   check('the volume slider starts at the default', await js(`document.getElementById('set-sound-volume').value === '50'`));
 
+  console.log('\ntimer');
+  const card = (sel) => `document.querySelector('#tm-list .tm-card')${sel ? '.querySelector(' + JSON.stringify(sel) + ')' : ''}`;
+  await js(`document.querySelector('[data-view="timer-page"]').click()`);
+  check('the Timer page opens from the sidebar', await until(`document.body.dataset.view === 'timer-page'`));
+  check('it has the window title bar', await js(`document.querySelector('#timer-page .win-title-text').textContent === 'TIMER.EXE'`));
+  check('it starts with no timers', await js(`!document.getElementById('tm-empty').hidden && !document.querySelector('#tm-list li')`));
+  // A zero length is refused with a message, not added.
+  await js(`(() => { for (const id of ['tm-h', 'tm-m', 'tm-s']) document.getElementById(id).value = '0'; document.getElementById('tm-submit').click(); })()`);
+  check('a timer with no length is refused', await js(`document.getElementById('tm-error').textContent !== '' && !document.querySelector('#tm-list li')`));
+  // A preset fills the length.
+  await js(`document.querySelector('.tm-preset[data-secs="1500"]').click()`);
+  check('a preset fills the length', await js(`document.getElementById('tm-m').value === '25' && document.getElementById('tm-h').value === '0'`));
+  // A 2 second timer, alarm off (the test should be quiet), banner off.
+  await js(`(() => {
+    document.getElementById('tm-name').value = 'Tea';
+    document.getElementById('tm-m').value = '0';
+    document.getElementById('tm-s').value = '2';
+    document.getElementById('tm-alarm').click();
+    document.getElementById('tm-notify').click();
+    document.getElementById('tm-submit').click();
+  })()`);
+  check('the timer is added with its name and length', await js(`${card('.win-title-text')}.textContent === 'Tea' && ${card('.tm-time')}.textContent === '00:02'`));
+  check('it is kept on this computer', await js(`(() => { const t = JSON.parse(localStorage.getItem('ethos.timers')).timers[0]; return t.label === 'Tea' && t.ms === 2000 && t.alarm === false && t.notify === false; })()`));
+  await js(`${card('.tm-go')}.click()`);
+  check('starting it shows it running, with a badge in the sidebar', await until(`${card()}.classList.contains('tm-running') && !document.getElementById('sb-timer-badge').hidden`));
+  check('the status row counts it', await js(`document.querySelector('#timer-page .view-status').textContent === '1 running'`));
+  check('main rings it at the end', await until(`${card()}.classList.contains('tm-done')`, 4000));
+  check("a Time's up toast appears", await js(`[...document.querySelectorAll('.ethos-notif-title')].some(n => n.textContent === "Time's up")`));
+  check('the badge goes when nothing is running', await js(`document.getElementById('sb-timer-badge').hidden`));
+  await js(`${card('.tm-go')}.click()`);
+  check('dismissing it puts it back to its full length', await until(`${card()}.classList.contains('tm-idle') && ${card('.tm-time')}.textContent === '00:02'`));
+  // Pause holds the time; it does not ring while paused.
+  await js(`${card('.tm-go')}.click()`);
+  await wait(400);
+  await js(`${card('.tm-go')}.click()`);
+  check('pausing holds it', await until(`${card()}.classList.contains('tm-paused')`));
+  await wait(2200);
+  check('a paused timer does not ring', await js(`${card()}.classList.contains('tm-paused')`));
+  // Edit: a new length, back to idle.
+  await js(`${card('.tm-edit')}.click()`);
+  check('edit fills the form', await js(`document.getElementById('tm-name').value === 'Tea' && document.getElementById('tm-submit').textContent === 'Save'`));
+  await js(`(() => { document.getElementById('tm-m').value = '3'; document.getElementById('tm-s').value = '0'; document.getElementById('tm-submit').click(); })()`);
+  check('saving changes the length and resets it', await js(`${card()}.classList.contains('tm-idle') && ${card('.tm-time')}.textContent === '03:00'`));
+  await js(`document.querySelectorAll('.ethos-notif-close').forEach(b => b.click())`);
+  await shot('timer.png');
+  // With its alarm on, a ringing timer offers Stop, and the toast offers Stop alarm.
+  // (A second of quiet beeps.)
+  await js(`(() => { ${card('.tm-edit')}.click(); document.getElementById('tm-m').value = '0'; document.getElementById('tm-s').value = '1';
+    const a = document.getElementById('tm-alarm'); if (a.getAttribute('aria-pressed') !== 'true') a.click();
+    document.getElementById('tm-submit').click(); ${card('.tm-go')}.click(); })()`);
+  check('a ringing alarm offers Stop', await until(`${card()}.classList.contains('tm-ringing') && ${card('.tm-go')}.textContent === 'Stop'`, 4000));
+  check('its toast offers Stop alarm and stays up', await js(`[...document.querySelectorAll('.ethos-notif-action')].some(b => b.textContent === 'Stop alarm')`));
+  await js(`${card('.tm-go')}.click()`);
+  check('Stop silences it and clears its toast', await until(`${card()}.classList.contains('tm-idle') && ![...document.querySelectorAll('.ethos-notif-action')].some(b => b.textContent === 'Stop alarm')`));
+  await js(`${card('.win-btn')}.click()`);
+  check('deleting it empties the list', await js(`!document.querySelector('#tm-list li') && !document.getElementById('tm-empty').hidden`));
+
   console.log('\nconsole');
   check('no renderer errors', errors.length === 0, errors.join(' | '));
 }

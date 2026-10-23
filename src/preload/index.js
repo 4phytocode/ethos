@@ -79,6 +79,20 @@ contextBridge.exposeInMainWorld('ethos', {
     return () => ipcRenderer.removeListener('event-reminder', listener);
   },
 
+  // The Timer page's deadlines live in main (src/main/timers.js), so a timer
+  // still rings while the window is hidden.
+  timers: {
+    arm: (timerId, input) => call('timers:arm', timerId, input),
+    disarm: (timerId) => call('timers:disarm', timerId),
+  },
+
+  // Main -> page, when a timer runs out. Same rules as onReminder.
+  onTimerDone: (callback) => {
+    const listener = (_event, t) => callback({ id: t.id });
+    ipcRenderer.on('timer-done', listener);
+    return () => ipcRenderer.removeListener('timer-done', listener);
+  },
+
   folders: {
     create: (input) => call('folders:create', input),
     rename: (folderId, input) => call('folders:rename', folderId, input),

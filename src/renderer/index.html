@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="styles/quote.css">
 <link rel="stylesheet" href="styles/todo.css">
 <link rel="stylesheet" href="styles/habits.css">
+<link rel="stylesheet" href="styles/timer.css">
 <link rel="stylesheet" href="styles/settings.css">
 <link rel="stylesheet" href="styles/sidebar.css">
 <link rel="stylesheet" href="styles/schedule.css">
@@ -89,6 +90,11 @@
       <button class="sidebar-btn" data-view="journals" type="button">
         <span class="sidebar-glyph" aria-hidden="true" data-icon="book-open" data-icon-size="16"></span>
         <span>Journal</span>
+      </button>
+      <button class="sidebar-btn" data-view="timer-page" type="button">
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="hourglass" data-icon-size="16"></span>
+        <span>Timer</span>
+        <span class="sb-badge" id="sb-timer-badge" hidden></span>
       </button>
       <button class="sidebar-btn" data-view="mood-page" data-full-only type="button">
         <span class="sidebar-glyph" aria-hidden="true" data-icon="mood-happy" data-icon-size="16"></span>
@@ -578,6 +584,49 @@
 
     <ul class="hb-list" id="hb-list"></ul>
     <p class="hb-empty" id="hb-empty">No habits yet. Add one to start your grid.</p>
+  </section>
+
+  <!-- Timer: countdowns that can sound an alarm and raise a Windows banner; see js/timer.js -->
+  <section id="timer-page" class="view">
+    <button class="back" data-back="home" title="Back" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h1>Timer</h1>
+    <p class="tm-sub">Set as many as you need. Each one can sound an alarm, show a Windows notification, or both.</p>
+
+    <form class="group tm-form" id="tm-form" autocomplete="off" novalidate>
+      <span class="group-label" id="tm-form-label">New timer</span>
+      <div class="tm-presets" role="group" aria-label="Quick lengths">
+        <button type="button" class="tm-preset" data-secs="60">1 min</button>
+        <button type="button" class="tm-preset" data-secs="300">5 min</button>
+        <button type="button" class="tm-preset" data-secs="600">10 min</button>
+        <button type="button" class="tm-preset" data-secs="900">15 min</button>
+        <button type="button" class="tm-preset" data-secs="1500">25 min</button>
+        <button type="button" class="tm-preset" data-secs="3600">1 hour</button>
+      </div>
+      <div class="tm-fields">
+        <label class="tm-field tm-field-name"><span>Name</span>
+          <input id="tm-name" type="text" maxlength="40" placeholder="e.g. Tea"/></label>
+        <label class="tm-field"><span>Hours</span>
+          <input id="tm-h" type="number" min="0" max="99" step="1" value="0" inputmode="numeric"/></label>
+        <label class="tm-field"><span>Minutes</span>
+          <input id="tm-m" type="number" min="0" max="59" step="1" value="5" inputmode="numeric"/></label>
+        <label class="tm-field"><span>Seconds</span>
+          <input id="tm-s" type="number" min="0" max="59" step="1" value="0" inputmode="numeric"/></label>
+      </div>
+      <div class="tm-form-foot">
+        <button type="button" class="tm-toggle" id="tm-alarm" aria-pressed="true" title="Sound an alarm when time is up">
+          <span data-icon="volume" data-icon-size="16"></span><span>Alarm</span></button>
+        <button type="button" class="tm-toggle" id="tm-notify" aria-pressed="true" title="Show a Windows notification when time is up">
+          <span data-icon="notification" data-icon-size="16"></span><span>Notification</span></button>
+        <span class="tm-error" id="tm-error" role="alert"></span>
+        <button type="button" class="tm-cancel" id="tm-cancel" hidden>Cancel</button>
+        <button type="submit" class="tm-submit" id="tm-submit">Add timer</button>
+      </div>
+    </form>
+
+    <ul class="tm-list" id="tm-list" aria-label="Timers"></ul>
+    <p class="tm-empty" id="tm-empty">No timers yet. Pick a length above and add one.</p>
   </section>
 
   <!-- Settings -->

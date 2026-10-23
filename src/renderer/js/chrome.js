@@ -9,6 +9,7 @@ import * as state from './state.js';
 import { show } from './views.js';
 import { todayISO } from './journal-streak.js';
 import { icon } from './icons.js';
+import { timerSummary } from './timer.js';
 
 // The window name in each title bar. The journal title is not shown here yet.
 const TITLES = {
@@ -21,6 +22,7 @@ const TITLES = {
   'mood-page': 'MOOD.EXE',
   'notes-page': 'NOTES.EXE',
   'graph-page': 'GRAPH.EXE',
+  'timer-page': 'TIMER.EXE',
   'settings-page': 'SETTINGS.EXE',
 };
 
@@ -47,6 +49,7 @@ const STATUS = {
     return plural(pages.length, 'page') + ' · ' + plural(links, 'link');
   },
   'mood-page': () => plural(state.moods().length, 'check-in'),
+  'timer-page': () => timerSummary(),
   'settings-page': () => 'Settings are kept on this computer',
 };
 
@@ -100,5 +103,7 @@ export function initChrome() {
     }
   });
   state.subscribe(renderStatus);
+  // Timers are not in the vault, so their page says when they change.
+  document.addEventListener('ethos:timers', renderStatus);
   renderStatus();
 }

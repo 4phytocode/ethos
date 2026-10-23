@@ -1,5 +1,7 @@
 // Typing sounds (PLAN-retro-demo.md, 7.5): a keyboard click as you write in the
 // journal and the Notes pages. Off by default; turned on in Settings > Sound.
+// Also the Timer page's alarm, which plays whatever the typing setting is: each
+// timer has its own alarm switch.
 //
 // The clicks are synthesised with the Web Audio API, so no audio file ships and
 // the page's CSP needs no media-src. Preferences live in localStorage, under
@@ -54,8 +56,8 @@ export function setVolume(v) {
   emit();
 }
 
-// Made on the first key after sounds were turned on: a key press is a user
-// gesture, so the context can start.
+// Made on the first sound. Electron does not hold audio back for a user
+// gesture, so an alarm can start the context from a hidden window.
 function ensureContext() {
   if (!ctx) {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -126,6 +128,55 @@ function onKeydown(e) {
   } else {
     click(1800 + Math.random() * 800, 1.5, 0.035, 0.8);
   }
+}
+
+// ─── Alarm ───
+// A 98-style beeper: four short square-wave beeps, then a rest, until it is
+// stopped or a minute has passed. It follows the Settings volume, but never
+// drops below a fifth of full, so a timer with its alarm on is never silent.
+
+const ALARM_PERIOD_MS = 1400;
+const ALARM_MAX_MS = 60000;
+let alarmTimer = null;
+let alarmStop = null;
+
+function beepRun() {
+  const out = ctx.createGain();
+  out.gain.value = Math.max(0.2, prefs.volume) * 0.18;
+  out.connect(ctx.destination);
+  const start = ctx.currentTime;
+  for (let i = 0; i < 4; i += 1) {
+    const at = start + i * 0.16;
+    const osc = ctx.createOscillator();
+    osc.type = 'square';
+    osc.frequency.value = 1760;
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, at);
+    env.gain.linearRampToValueAtTime(1, at + 0.005);
+    env.gain.setValueAtTime(1, at + 0.085);
+    env.gain.linearRampToValueAtTime(0, at + 0.09);
+    osc.connect(env).connect(out);
+    osc.start(at);
+    osc.stop(at + 0.1);
+  }
+  setTimeout(() => out.disconnect(), 800);
+}
+
+export function alarmPlaying() { return alarmTimer !== null; }
+
+// Starts the alarm, or keeps the one already playing. `onEnd` runs when it
+// stops by itself after a minute.
+export function startAlarm(onEnd) {
+  if (alarmTimer) return;
+  ensureContext();
+  beepRun();
+  alarmTimer = setInterval(beepRun, ALARM_PERIOD_MS);
+  alarmStop = setTimeout(() => { stopAlarm(); if (onEnd) onEnd(); }, ALARM_MAX_MS);
+}
+
+export function stopAlarm() {
+  if (alarmTimer) { clearInterval(alarmTimer); alarmTimer = null; }
+  if (alarmStop) { clearTimeout(alarmStop); alarmStop = null; }
 }
 
 // The first time a typing field is focused, offer the sound once, as a toast.
