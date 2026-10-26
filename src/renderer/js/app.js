@@ -11,6 +11,7 @@ import { initQuote } from './quotes.js';
 import { initTodo, initReminders } from './todo.js';
 import { initHabits } from './habits.js';
 import { initSchedule } from './schedule.js';
+import { commitDayNote } from './daynotes.js';
 import { initNotes, commitNotes } from './notes.js';
 import { initGraph } from './graph.js';
 import { initSidebar } from './sidebar.js';
@@ -19,6 +20,11 @@ import { initAppearance, initSettings } from './settings.js';
 import { notify } from './notifications.js';
 import { initBackdrop, initBackdropSettings } from './backdrop.js';
 import { initMood } from './mood.js';
+import { initGoals } from './goals.js';
+import { hydrateIcons } from './icons.js';
+import { initChrome } from './chrome.js';
+import { initSound, initSoundSettings } from './sound.js';
+import { initTimer } from './timer.js';
 
 // The app can stay open across midnight. Habits, the journal calendar and the
 // homepage read "today" when they draw, so a redraw at the new day is all it
@@ -45,6 +51,8 @@ async function main() {
   // process reports, and the journals list draws from the loaded notes.
   try {
     await state.load();
+    document.body.dataset.edition = state.editionName();
+    document.title = state.editionName() === 'demo' ? 'Ethos (demo)' : 'Ethos';
   } catch (err) {
     notify.show({
       title: 'Could not open your vault',
@@ -57,17 +65,23 @@ async function main() {
   initTags();
   initJournals();
   initSettings();
+  initSound(notify);
+  initSoundSettings();
   initBackdropSettings();
   initClock();
   initQuote();
   initTodo();
   initHabits();
   initMood();
+  initGoals();
   initSchedule();
   initNotes();
   initGraph();
   initReminders();
+  initTimer();
   rollOverAtMidnight();
+  hydrateIcons();
+  initChrome();
   playIntro();
 
   // Main asks before the window closes and waits for this answer, so text still
@@ -75,7 +89,7 @@ async function main() {
   // beforeunload could be cut off by the teardown.
   // Both editors hold unsaved typing: journals and Notes pages.
   window.ethos.onCommitRequest(() => {
-    Promise.allSettled([commitPending(), commitNotes()])
+    Promise.allSettled([commitPending(), commitNotes(), commitDayNote()])
       .then(() => state.flush())
       .catch(err => console.error('commit before close failed:', err.message))
       .finally(() => window.ethos.closeReady());

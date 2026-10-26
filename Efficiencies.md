@@ -156,9 +156,9 @@ if modified, so check that before shipping a subset.
 
 ### 9. Startup waterfall
 
-`index.html` links 11 stylesheets, each a separate request through the custom
+`index.html` links 18 stylesheets (as of 2026-10-23), each a separate request through the custom
 protocol, all render-blocking, then one `<script type="module">` whose imports
-are discovered only as each file parses (`app.js` → 12 modules, some nested).
+are discovered only as each file parses (`app.js` → 19 import lines).
 Every request is `fs.stat` then `net.fetch(file://)` (`protocol.js:88–96`), two
 filesystem operations per asset.
 
@@ -246,7 +246,7 @@ Safe removals once confirmed, none of them urgent:
 - `state.event / eventsOn / removeTag`, `notify.clear / count / queued`,
   `tray.iconImage` export have no callers.
 - `main.js.pre-restructure.bak` and `notifications.js.pre-restructure.bak`
-  sit in the project root (CONTEXT says safe to delete once git works).
+  were deleted on 2026-10-23 (they are in commit `6336f28`).
 - The dormant events subsystem still costs a copy and a clone per snapshot
   and three IPC channels (`CONTEXT.md` §7 has the removal checklist).
 
@@ -284,7 +284,7 @@ Measured on disk, dev folder `H:\ethos` = **401 MB**.
 | `src/renderer/backgrounds/` | 16 MB | yes | eight 3840px JPEGs + thumbs. Largest app-owned item |
 | `src/` code | ~1 MB | yes | JS/CSS/HTML |
 | `src/renderer/fonts/` | 0.6 MB | yes | IBM Plex Mono, five weights |
-| `references/` | 1.4 MB | **no** | 1.3 MB PNG, 63 KB webp; design reference only |
+| `references/` | 4.9 MB | **no** | includes a 4.4 MB PNG and the `ui design/` folder; design reference only (measured 2026-10-23) |
 | `backups/` | 0.9 MB | **no** | old source snapshot |
 | `*.pre-restructure.bak` | 40 KB | **no** | delete once git works |
 | `imgs/` | 16 KB | **no** | source artwork |
@@ -295,10 +295,16 @@ Measured on disk, dev folder `H:\ethos` = **401 MB**.
 |---|---|---|---|
 | Dev folder (with node_modules) | ~401 MB | ~330 MB | locale pruning and removing dev-only folders. A fresh `npm install` restores node_modules (~380 MB), so this is a checkout size, not a shipped size. |
 | Packaged app, unpacked | ~385 MB | ~290 MB | locale pruning (-48 MB), backgrounds to WebP (-9 MB), removing unused DLLs (-7 to -27 MB) |
-| Packaged installer (compressed) | ~130 MB (est.) | **~80-95 MB** (est.) | electron-builder with asar and max compression. Electron's floor is roughly 75-80 MB. |
+| Packaged installer (compressed) | ~130 MB (est.) | **114 MB (measured 2026-10-23)** | electron-builder with asar and max compression. Electron's floor is roughly 75-80 MB. |
 | Route to a drastically smaller app | n/a | **~5-10 MB** | replace Electron with Tauri (system WebView2). Main-process code (vault, store, IPC) is plain JS and would need porting to Rust or a sidecar. This is a rewrite, not a tweak. |
 
 These are estimates, not measured builds. The first real build will settle them.
+
+**Measured 2026-10-23** (`npm run dist`, electron-builder 26.15.3, en-GB + en-US locales,
+asar with maximum compression): installer **114 MB**, `win-unpacked` **337 MB**, of which
+`app.asar` is 17 MB (backgrounds 16 MB). The locale prune removed the 48 MB of other
+locales as planned. The rest is the Electron runtime (`electron.exe` 234 MB, `dxcompiler.dll`
+26 MB). The installer is above the 80-95 MB estimate; see bugs.md 12.9.
 
 ### Steps, in order of payoff for effort
 
@@ -311,6 +317,6 @@ These are estimates, not measured builds. The first real build will settle them.
 
 ### Things that are not worth doing
 - Compressing `electron.exe` with UPX: breaks code signing and triggers antivirus false positives.
-- Shrinking the fonts: 0.6 MB total, and they are the default face.
+- Shrinking the fonts by hand during development: 0.6 MB total, and they are the default face. The WOFF2 subsetting in item 8 is the one exception, and only at packaging time (PLAN-retro-demo.md, task 9.2).
 - Splitting the vault into a second package: the vault is user data, not app size, and it is tiny.
 

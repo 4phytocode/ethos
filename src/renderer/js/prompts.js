@@ -10,8 +10,16 @@
 
 import { GRATITUDE, DEEP } from './prompts-data.js';
 
-// 10s while testing; the intended value is about 30s.
-const NUDGE_MS = 10 * 1000;
+// How long a page sits empty before the nudge appears. The test harness sets
+// ethos.test.nudgeMs to shorten it; nothing else does.
+const NUDGE_MS = 30 * 1000;
+function nudgeMs() {
+  try {
+    const v = Number(localStorage.getItem('ethos.test.nudgeMs'));
+    if (Number.isInteger(v) && v > 0) return v;
+  } catch { /* storage unavailable: use the default */ }
+  return NUDGE_MS;
+}
 // "Almost fully empty": fewer characters than this still counts as empty.
 const NEARLY_EMPTY = 12;
 const PAPER_KEY = 'ethos.paper';
@@ -75,7 +83,7 @@ function arm() {
   timer = setTimeout(() => {
     timer = null;
     if (noteId && els.panel.hidden && els.textarea.value.trim().length < NEARLY_EMPTY) els.nudge.hidden = false;
-  }, NUDGE_MS);
+  }, nudgeMs());
 }
 
 function openPanel() {

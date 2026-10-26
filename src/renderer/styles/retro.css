@@ -1,0 +1,258 @@
+/* The shared component kit (PLAN-retro-demo.md, phase 4).
+
+   Loads right after base.css, so every rule here is a default. A component
+   that sets its own background or shadow keeps it; the component files load
+   later and win on a tie. Every colour comes from the tokens in base.css, so
+   the same rules give the 98 look in light and the website look in dark. */
+
+/* ---- defaults for controls --------------------------------------------- */
+
+/* Buttons are raised bevels by default. Ghost buttons (transparent, no
+   shadow) opt out in their own file. */
+button {
+  background: var(--face);
+  color: var(--fg);
+  box-shadow: var(--bevel-out);
+  border: 0;
+  border-radius: var(--radius);
+  font-family: inherit;
+  cursor: pointer;
+}
+button:active:not(:disabled) { box-shadow: var(--bevel-in); }
+button:disabled { color: var(--muted); opacity: 0.6; cursor: default; }
+
+/* Fields are sunken: white in light, a dark well in dark. */
+input[type="text"], input[type="search"], input[type="number"],
+input[type="time"], input[type="date"], input:not([type]), textarea, select {
+  background: var(--field);
+  color: var(--fg);
+  box-shadow: var(--bevel-field);
+  border: 0;
+  border-radius: var(--radius);
+  font-family: inherit;
+}
+
+/* ---- pixel icons ---------------------------------------------------------- */
+
+.px-icon { display: block; flex: none; shape-rendering: crispEdges; }
+
+/* ---- window: a title bar over a raised face (98 window, site .win) -------- */
+
+.win {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 3px;
+  background: var(--face);
+  box-shadow: var(--bevel-out);
+}
+
+.win-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 24px;
+  padding: 0 3px 0 6px;
+  background: var(--title-bg);
+  color: var(--title-fg);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  user-select: none;
+}
+.win-title-text { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.win-title .px-icon { color: var(--title-fg); }
+
+/* Small square buttons at the right of a title bar. They draw a glyph with text,
+   because the 24-unit icon grid is too coarse at 14px. */
+.win-btn {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 14px;
+  min-height: 0;
+  padding: 0;
+  background: var(--face);
+  color: var(--fg);
+  box-shadow: var(--bevel-out);
+  font-family: var(--font-display);
+  font-size: 12px;
+  line-height: 1;
+}
+.win-btn:active:not(:disabled) { box-shadow: var(--bevel-in); }
+
+.win-body { flex: 1; min-height: 0; padding: 8px; }
+
+/* A status row under a window: sunken cells, like the bottom of a 98 window. */
+.win-status {
+  display: flex;
+  gap: 3px;
+  flex: none;
+  padding-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.win-status > * {
+  padding: 2px 6px;
+  background: var(--face);
+  box-shadow: var(--bevel-field);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.win-status > .grow { flex: 1; }
+
+/* ---- view chrome (js/chrome.js) ------------------------------------------- */
+
+/* Each view's title bar. The brand mark is fixed over the top left, so the
+   title text starts clear of it. */
+.view-titlebar { margin: 0 0 14px; padding-left: 56px; }
+/* Home is a two-column grid; its title bar spans both columns. */
+#home > .view-titlebar { grid-column: 1 / -1; }
+.view-status {
+  margin: 14px 0 56px;   /* clears the theme toggle, fixed at the bottom left */
+  padding: 3px 8px;
+  background: var(--face);
+  box-shadow: var(--bevel-field);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* ---- menu: a raised list of rows (Start menu, menu bar drop-downs) --------- */
+
+.menu {
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 2px;
+  background: var(--face);
+  box-shadow: var(--bevel-out);
+}
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 24px;
+  padding: 0 14px 0 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--fg);
+  font-size: 14px;
+  text-align: left;
+}
+.menu-item:hover:not(:disabled),
+.menu-item:focus-visible {
+  background: var(--accent);
+  color: var(--accent-fg);
+  outline: none;
+}
+.menu-item:disabled { color: var(--muted); }
+.menu-sep { height: 2px; margin: 3px 2px; border-top: 1px solid var(--lo); border-bottom: 1px solid var(--hi); }
+
+/* ---- group box: a labelled etched frame (98 Date/Time, site fieldsets) ----- */
+
+.group {
+  position: relative;
+  margin: 10px 0 0;
+  padding: 14px 10px 10px;
+  border: 1px solid var(--line);
+}
+.group > .group-label {
+  position: absolute;
+  top: -9px;
+  left: 8px;
+  padding: 0 4px;
+  background: var(--face);
+  color: var(--fg);
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ---- tabs: the active tab joins the panel below it ------------------------ */
+
+.tabs { display: flex; gap: 2px; }
+.tabs > button {
+  padding: 4px 12px 3px;
+  background: var(--face);
+  color: var(--muted);
+  box-shadow: var(--bevel-out);
+  margin-bottom: -2px;
+  font-size: 14px;
+}
+.tabs > button[aria-selected="true"] {
+  background: var(--card);
+  color: var(--fg);
+  margin-top: -2px;
+  margin-bottom: 0;
+  z-index: 1;
+}
+
+/* ---- progress: a sunken track filled with blocks (98 progress bar) -------- */
+
+.progress {
+  height: 14px;
+  padding: 2px;
+  background: var(--field);
+  box-shadow: var(--bevel-field);
+}
+.progress > i {
+  display: block;
+  height: 100%;
+  width: var(--p, 0%);
+  background: repeating-linear-gradient(90deg, var(--accent) 0 8px, transparent 8px 10px);
+}
+
+/* ---- dither: a 50% pattern, for "partly" and disabled areas --------------- */
+
+.dither {
+  background-color: transparent;
+  background-image: repeating-conic-gradient(var(--accent) 0 25%, transparent 0 50%);
+  background-size: 2px 2px;
+}
+
+/* ---- dialog: a modal window over a dimmed page -------------------------- */
+
+.dlg-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.35);
+}
+.dlg { width: min(360px, calc(100vw - 48px)); }
+.dlg-body { display: flex; flex-direction: column; gap: 14px; padding: 12px 10px 10px; color: var(--fg); font-size: 14px; line-height: 1.5; }
+.dlg-buttons { display: flex; justify-content: flex-end; gap: 8px; }
+.dlg-buttons button { min-width: 84px; padding: 5px 14px; font-size: 14px; }
+.dlg-buttons button.primary { box-shadow: var(--bevel-out), 0 0 0 1px var(--fg); }
+.dlg-buttons button.danger { color: var(--danger); }
+
+/* ---- editions (src/main/edition.js) ---------------------------------------- */
+
+/* Systems that belong to the full edition are not drawn in the demo. The page
+   hides them, and views.js refuses to open them, so no shortcut reaches them. */
+body[data-edition="demo"] [data-full-only] { display: none !important; }
+
+/* ---- motion (PLAN-retro-demo.md, phase 7) --------------------------------- */
+
+/* Buttons press in and spring back: the bevel flips on press (above), and the
+   release overshoots on the app's spring. */
+button { transition: box-shadow 0.06s linear, transform 0.16s cubic-bezier(0.34, 1.4, 0.64, 1); }
+button:active:not(:disabled) { transform: translate(1px, 1px); }
+
+/* A view opens in three steps of opacity, the 98 "window appears" feel. Opacity
+   only: a transform here would re-anchor the fixed popovers inside a view. */
+@keyframes win-open { from { opacity: 0; } to { opacity: 1; } }
+.view.active { animation: win-open 0.12s steps(3, end); }
+
+/* A steady caret in the accent colour, in the editors and anywhere text is typed. */
+textarea { caret-color: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) {
+  button, button:active:not(:disabled) { transition: none; transform: none; }
+  .view.active { animation: none; }
+}

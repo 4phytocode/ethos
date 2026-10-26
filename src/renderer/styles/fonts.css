@@ -10,6 +10,21 @@
              src: url('../fonts/IBMPlexMono-Bold.ttf') format('truetype'); }
 @font-face { font-family: 'IBM Plex Mono'; font-style: italic; font-weight: 400; font-display: swap;
              src: url('../fonts/IBMPlexMono-Italic.ttf') format('truetype'); }
+/* The headings face (--font-display): a pixel recreation of the 98 system font,
+   the FontStruction "MS Sans Serif" by lou, CC BY-SA 3.0. Its licence and readme
+   sit beside it in fonts/ms-sans-serif/ and must ship with it. It is drawn on an
+   11px grid, so it is set at 11, 22 or 33px only; other sizes blur. Declared
+   under our own family name, so nothing in the app names the original. */
+@font-face { font-family: 'Ethos Pixel Sans'; font-style: normal; font-weight: 400; font-display: swap;
+             src: url('../fonts/ms-sans-serif/ms-sans-serif-pixel.ttf') format('truetype'); }
+@font-face { font-family: 'Ethos Pixel Sans'; font-style: normal; font-weight: 700; font-display: swap;
+             src: url('../fonts/ms-sans-serif/ms-sans-serif-pixel-bold.ttf') format('truetype'); }
+
+/* Pixelify Sans: a body-text choice in Settings, and the fallback heading face. A
+   variable font, so one file covers every weight. Upper and lower case both
+   work, which is why it was chosen over Silkscreen (PLAN-retro-demo.md, 0a). */
+@font-face { font-family: 'Pixelify Sans'; font-style: normal; font-weight: 400 700; font-display: swap;
+             src: url('../fonts/PixelifySans.ttf') format('truetype'); }
 
 /* Tuning for IBM Plex Mono. A monospace face is wider and heavier than a UI
    sans at the same size, so on its own it reads dense. These soften it:
@@ -17,8 +32,7 @@
    line height for prose. Scoped by the attribute applyFont() sets, so System UI
    is untouched. */
 html[data-font="plex-mono"] body { letter-spacing: -0.01em; -webkit-font-smoothing: antialiased; }
-html[data-font="plex-mono"] h1,
-html[data-font="plex-mono"] h2,
+/* Headings are not listed: they use the pixel face, which wants tracking 0. */
 html[data-font="plex-mono"] .jp-title,
 html[data-font="plex-mono"] .page-card .name,
 html[data-font="plex-mono"] .set-preview-title { font-weight: 600; letter-spacing: -0.02em; }

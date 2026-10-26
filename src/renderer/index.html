@@ -5,6 +5,7 @@
 <title>Ethos</title>
 <link rel="stylesheet" href="styles/fonts.css">
 <link rel="stylesheet" href="styles/base.css">
+<link rel="stylesheet" href="styles/retro.css">
 <link rel="stylesheet" href="styles/intro.css">
 <link rel="stylesheet" href="styles/journals.css">
 <link rel="stylesheet" href="styles/tags.css">
@@ -12,6 +13,7 @@
 <link rel="stylesheet" href="styles/quote.css">
 <link rel="stylesheet" href="styles/todo.css">
 <link rel="stylesheet" href="styles/habits.css">
+<link rel="stylesheet" href="styles/timer.css">
 <link rel="stylesheet" href="styles/settings.css">
 <link rel="stylesheet" href="styles/sidebar.css">
 <link rel="stylesheet" href="styles/schedule.css">
@@ -25,16 +27,20 @@
 <body>
   <!-- Moving background, or the user's image; see js/backdrop.js. Behind everything, never clickable. -->
   <div id="backdrop" aria-hidden="true"><div class="bd-image" id="bd-image"></div></div>
+  <!-- Faint scanlines over the dark theme; on or off in Settings > Background. -->
+  <div id="crt" aria-hidden="true"></div>
 
-  <!-- Launch intro: big e with a ring drawn behind, then in front of it -->
+  <!-- Launch intro: boot text, then the big e with a ring drawn round it, which
+       shrinks into the brand mark; see js/intro.js -->
   <div id="intro" aria-hidden="true">
+    <div id="intro-boot"></div>
     <!-- One full ring behind the e; an identical copy in front, clipped to its near (lower) half -->
     <svg class="ring back" viewBox="0 0 460 460">
       <g transform="rotate(-18 230 230)">
         <path pathLength="1" d="M20 230 A210 58 0 0 1 440 230 A210 58 0 0 1 20 230"/>
       </g>
     </svg>
-    <!-- Same 40x24 box as the brand logo, drawn 10x larger so it can shrink straight into it -->
+    <!-- Same 40x24 box as the brand mark, drawn 10x larger so it can shrink straight into it -->
     <svg id="intro-e" viewBox="0 0 40 24" fill="#ffffff">
       <text x="13" y="20" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700">e</text>
     </svg>
@@ -66,27 +72,32 @@
     </div>
     <nav class="sb-nav">
       <button class="sidebar-btn" data-view="home" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="home" data-icon-size="16"></span>
         <span>Home</span>
       </button>
       <button class="sidebar-btn" data-view="schedule-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="calendar" data-icon-size="16"></span>
         <span>Schedule</span>
       </button>
       <button class="sidebar-btn" data-view="todo-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M8 12l3 3 5-6"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="checkbox" data-icon-size="16"></span>
         <span>To-do's</span>
       </button>
       <button class="sidebar-btn" data-view="habit-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="chart-bar" data-icon-size="16"></span>
         <span>Habit tracker</span>
       </button>
       <button class="sidebar-btn" data-view="journals" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3z"/><path d="M5 17a3 3 0 0 1 3-3h11"/></svg>
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="book-open" data-icon-size="16"></span>
         <span>Journal</span>
       </button>
-      <button class="sidebar-btn" data-view="mood-page" type="button">
-        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 5.5c3-1.3 6.5-1.3 10 1 3.5-2.3 7-2.3 10-1V19c-3-1.3-6.5-1.3-10 1-3.5-2.3-7-2.3-10-1z"/><path d="M12 6.5V20"/></svg>
+      <button class="sidebar-btn" data-view="timer-page" type="button">
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="hourglass" data-icon-size="16"></span>
+        <span>Timer</span>
+        <span class="sb-badge" id="sb-timer-badge" hidden></span>
+      </button>
+      <button class="sidebar-btn" data-view="mood-page" data-full-only type="button">
+        <span class="sidebar-glyph" aria-hidden="true" data-icon="mood-happy" data-icon-size="16"></span>
         <span>Mood log</span>
       </button>
     </nav>
@@ -108,7 +119,7 @@
     </section>
 
     <div class="sb-foot">
-    <button class="sidebar-btn" data-view="settings-page" type="button"><span class="sidebar-glyph" aria-hidden="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Settings</span></button>
+    <button class="sidebar-btn" data-view="settings-page" type="button"><span class="sidebar-glyph" aria-hidden="true" data-icon="sliders" data-icon-size="16"></span><span>Settings</span></button>
     </div>
   </aside>
   <!-- Shown only while the sidebar is hidden -->
@@ -119,6 +130,15 @@
   <!-- Homepage -->
   <section id="home" class="view active">
     <h1>Homepage</h1>
+
+    <!-- Week, month and year goals, always in view; see js/goals.js -->
+    <section class="home-goals" aria-labelledby="home-goals-heading">
+      <div class="todo-card-head">
+        <h2 id="home-goals-heading">Goals</h2>
+        <span class="home-goals-stat" id="goals-stat"></span>
+      </div>
+      <ul class="goals-list" id="goals-list"></ul>
+    </section>
     <div class="home-top">
     <figure class="home-quote" id="home-quote">
       <blockquote class="quote-text"></blockquote>
@@ -126,7 +146,7 @@
     </figure>
 
     <!-- Daily check-in; see js/mood.js -->
-    <section class="mood-card" id="mood-card" aria-labelledby="mood-heading">
+    <section class="mood-card" id="mood-card" data-full-only aria-labelledby="mood-heading">
       <div class="mood-head">
         <h2 id="mood-heading">How are you feeling?</h2>
         <button class="mood-log-link" data-view-link="mood-page" type="button">Log</button>
@@ -191,7 +211,7 @@
   </section>
 
   <!-- Mood log: one row per day, newest first; see js/mood.js -->
-  <section id="mood-page" class="view">
+  <section id="mood-page" class="view" data-full-only>
     <button class="back" data-back="home" title="Back" aria-label="Back">
       <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
     </button>
@@ -333,7 +353,7 @@
     <div class="tag-panel" id="tag-pick-panel">
       <div class="tag-pick-list" id="tag-pick-list"></div>
     </div>
-    <textarea id="jp-textarea" placeholder="Start writing..."></textarea>
+    <textarea id="jp-textarea" data-typing-sound placeholder="Start writing..."></textarea>
   </section>
 
   <!-- Schedule: draw on the grid to make an event; see js/schedule.js -->
@@ -341,12 +361,15 @@
     <div class="sc-shell">
       <aside class="sc-rail">
         <div class="sc-mini" id="sc-mini"></div>
+        <!-- Day notes: the selected day, then the plan ahead; see js/daynotes.js -->
+        <div class="dn-rail" id="dn-rail-day"></div>
+        <div class="dn-rail" id="dn-rail-plan"></div>
         <div class="sc-agenda-wrap">
           <h2 class="sc-rail-head">Up next</h2>
           <ul class="sc-agenda" id="sc-agenda"></ul>
         </div>
         <p class="sc-hint">Drag on the grid to draw an event. Drag it to move, pull its lower edge to stretch.<br>
-          <kbd>N</kbd> new &middot; <kbd>T</kbd> today &middot; <kbd>D</kbd> <kbd>W</kbd> <kbd>M</kbd> view &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd></p>
+          <kbd>N</kbd> new &middot; <kbd>J</kbd> day note &middot; <kbd>T</kbd> today &middot; <kbd>D</kbd> <kbd>W</kbd> <kbd>M</kbd> view &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd></p>
       </aside>
 
       <div class="sc-main">
@@ -364,6 +387,7 @@
               <button type="button" role="tab" data-mode="week">Week</button>
               <button type="button" role="tab" data-mode="month">Month</button>
             </div>
+            <button class="sc-btn" id="sc-note-add" type="button" title="Add a note to this day (J)">+ Day note</button>
             <button class="sc-add" id="sc-add" type="button" title="New event (N)" aria-label="New event">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
@@ -407,8 +431,21 @@
         <button class="nt-btn" id="nt-new-temp" type="button">Temporary note</button>
         <button class="nt-btn" id="nt-new-folder" type="button">New folder</button>
         <button class="nt-btn" id="nt-graph" type="button" title="Graph view (Ctrl+G)">Graph view</button>
+        <button class="nt-btn" id="nt-find" type="button" title="Jump to a note (Ctrl+P)">Find note</button>
       </div>
-      <h2 class="nt-sub">Recent</h2>
+      <div class="nt-home-tools">
+        <input class="nt-search" id="nt-search" type="search" placeholder="Search notes..." aria-label="Search notes" maxlength="100" spellcheck="false"/>
+        <select class="nt-sort" id="nt-sort" aria-label="Sort notes">
+          <option value="recent">Recently edited</option>
+          <option value="created">Newest first</option>
+          <option value="title">A to Z</option>
+        </select>
+      </div>
+      <div id="nt-pinned-wrap" hidden>
+        <h2 class="nt-sub">Pinned</h2>
+        <div class="nt-recent" id="nt-pinned"></div>
+      </div>
+      <h2 class="nt-sub" id="nt-recent-head">Recent</h2>
       <div class="nt-recent" id="nt-recent"></div>
     </div>
 
@@ -416,8 +453,11 @@
       <div class="nt-bar">
         <button class="nt-crumb" id="nt-crumb" type="button" title="All notes"></button>
         <div class="nt-bar-tools">
+          <button class="nt-chip" id="nt-add-table" type="button" title="Insert a table at the cursor (or type /table)">+ Table</button>
           <select class="nt-move" id="nt-move" aria-label="Folder"></select>
+          <button class="nt-chip" id="nt-pin" type="button" aria-pressed="false">Pin</button>
           <button class="nt-chip" id="nt-temp" type="button" aria-pressed="false">Mark temporary</button>
+          <button class="nt-chip" id="nt-more" type="button" aria-label="More note actions" title="More">⋯</button>
           <button class="nt-chip nt-danger" id="nt-delete" type="button">Delete</button>
         </div>
       </div>
@@ -442,7 +482,8 @@
           <div class="nt-links-chips" id="nt-links-in"></div>
         </div>
       </div>
-      <textarea class="nt-body" id="nt-body" placeholder="Write something..."></textarea>
+      <!-- Text and tables, in page order; see notes.js "Blocks" -->
+      <div class="nt-blocks" id="nt-blocks"></div>
     </article>
   </section>
 
@@ -527,7 +568,7 @@
       </section>
     </div>
 
-    <div class="td-blockers">
+    <div class="td-blockers" data-full-only>
       <button class="td-blockers-btn" id="td-blockers" type="button">Blockers</button>
       <p class="td-blockers-note">Coming soon, EthosBlock</p>
     </div>
@@ -573,6 +614,49 @@
 
     <ul class="hb-list" id="hb-list"></ul>
     <p class="hb-empty" id="hb-empty">No habits yet. Add one to start your grid.</p>
+  </section>
+
+  <!-- Timer: countdowns that can sound an alarm and raise a Windows banner; see js/timer.js -->
+  <section id="timer-page" class="view">
+    <button class="back" data-back="home" title="Back" aria-label="Back">
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </button>
+    <h1>Timer</h1>
+    <p class="tm-sub">Set as many as you need. Each one can sound an alarm, show a Windows notification, or both.</p>
+
+    <form class="group tm-form" id="tm-form" autocomplete="off" novalidate>
+      <span class="group-label" id="tm-form-label">New timer</span>
+      <div class="tm-presets" role="group" aria-label="Quick lengths">
+        <button type="button" class="tm-preset" data-secs="60">1 min</button>
+        <button type="button" class="tm-preset" data-secs="300">5 min</button>
+        <button type="button" class="tm-preset" data-secs="600">10 min</button>
+        <button type="button" class="tm-preset" data-secs="900">15 min</button>
+        <button type="button" class="tm-preset" data-secs="1500">25 min</button>
+        <button type="button" class="tm-preset" data-secs="3600">1 hour</button>
+      </div>
+      <div class="tm-fields">
+        <label class="tm-field tm-field-name"><span>Name</span>
+          <input id="tm-name" type="text" maxlength="40" placeholder="e.g. Tea"/></label>
+        <label class="tm-field"><span>Hours</span>
+          <input id="tm-h" type="number" min="0" max="99" step="1" value="0" inputmode="numeric"/></label>
+        <label class="tm-field"><span>Minutes</span>
+          <input id="tm-m" type="number" min="0" max="59" step="1" value="5" inputmode="numeric"/></label>
+        <label class="tm-field"><span>Seconds</span>
+          <input id="tm-s" type="number" min="0" max="59" step="1" value="0" inputmode="numeric"/></label>
+      </div>
+      <div class="tm-form-foot">
+        <button type="button" class="tm-toggle" id="tm-alarm" aria-pressed="true" title="Sound an alarm when time is up">
+          <span data-icon="volume" data-icon-size="16"></span><span>Alarm</span></button>
+        <button type="button" class="tm-toggle" id="tm-notify" aria-pressed="true" title="Show a Windows notification when time is up">
+          <span data-icon="notification" data-icon-size="16"></span><span>Notification</span></button>
+        <span class="tm-error" id="tm-error" role="alert"></span>
+        <button type="button" class="tm-cancel" id="tm-cancel" hidden>Cancel</button>
+        <button type="submit" class="tm-submit" id="tm-submit">Add timer</button>
+      </div>
+    </form>
+
+    <ul class="tm-list" id="tm-list" aria-label="Timers"></ul>
+    <p class="tm-empty" id="tm-empty">No timers yet. Pick a length above and add one.</p>
   </section>
 
   <!-- Settings -->
@@ -622,6 +706,22 @@
         <div class="set-seg-group" id="set-bg-mode"></div>
       </div>
 
+      <div class="set-row set-bg-patternrow">
+        <div class="set-label">
+          <span>Pattern</span>
+          <span class="set-hint">The desktop behind the windows.</span>
+        </div>
+        <div class="set-seg-group" id="set-bg-pattern"></div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Scanlines</span>
+          <span class="set-hint">Faint lines over the dark theme, like an old monitor.</span>
+        </div>
+        <div class="set-seg-group" id="set-bg-crt"></div>
+      </div>
+
       <div class="set-row">
         <div class="set-label">
           <span>Where</span>
@@ -659,6 +759,26 @@
         <div class="set-tiles" id="set-bg-presets"></div>
         <button class="set-bg-remove" id="set-bg-clear" type="button" hidden>Remove uploaded image</button>
         <input id="set-bg-file" type="file" accept="image/png,image/jpeg,image/webp" hidden/>
+      </div>
+    </section>
+
+    <section class="set-section">
+      <h2>Sound</h2>
+      <p class="set-section-sub">A small click as you write.</p>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Typing sounds</span>
+          <span class="set-hint">In the journal and the Notes pages.</span>
+        </div>
+        <div class="set-seg-group" id="set-sound-typing"></div>
+      </div>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Volume</span>
+        </div>
+        <input type="range" id="set-sound-volume" min="0" max="100" step="5" aria-label="Typing sound volume">
       </div>
     </section>
   </section>

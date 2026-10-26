@@ -3,7 +3,7 @@
 Everything needed to pick this codebase up cold. Read this before changing
 anything; read `todo.md` for what is planned next.
 
-Last updated 2026-10-21, after the homepage / journal pass (backdrop, mood log,
+Last updated 2026-10-23 (housekeeping pass; the retro redesign is planned in PLAN-retro-demo.md). Before that, 2026-10-21, after the homepage / journal pass (backdrop, mood log,
 homepage habits, journal prompts and paper). See section 14 for that pass.
 
 ---
@@ -47,7 +47,9 @@ speculatively.
 ```
 npm start          # electron .
 npm run check      # 84 model-layer checks, plain node, no Electron
-npm run test:ui    # 55 end-to-end checks in a real window, throwaway vault (~50s)
+npm run test:ui    # 68 end-to-end checks in a real window, throwaway vault (~60s)
+npm run dist       # the Windows installer in dist/ (electron-builder; see section 17)
+npm run icons      # rebuild every logo size from imgs/new logo [1].png (Pillow)
 ```
 
 `npm run check` is the fast feedback loop. It imports `src/main/{vault,store,
@@ -63,20 +65,22 @@ anything under `src/main`.**
 src/main/        the only code that touches disk or holds authoritative state
   index.js       app lifecycle, BrowserWindow, security posture
   protocol.js    the app://ethos scheme, CSP, path containment
-  ipc.js         the 23 IPC handlers, each wrapped in an { ok, error } envelope
+  ipc.js         the 27 IPC handlers, each wrapped in an { ok, error } envelope
   store.js       authoritative state + mutations + debounced saving
   vault.js       atomic disk I/O, the on-disk layout, quarantine
   schema.js      validation and migrations, shared by disk and IPC
   reminders.js   to-do and event reminder scheduler (no electron import; testable in node)
-  tray.js        tray icon, drawn in code, so Ethos can run with its window closed
+  timers.js      rings the Timer page's timers (no electron import; testable in node)
+  tray.js        tray icon (assets/tray-16.png), so Ethos can run with its window closed
+  edition.js     demo or full; the page hides what the edition lacks (section 17)
 
 src/preload/
   index.js       contextBridge surface; exposes functions, never ipcRenderer
 
 src/renderer/    rendering only; no fs, no business logic, no authority
   index.html
-  styles/        base, clock, intro, journals, tags, todo, habits, settings,
-                 sidebar, schedule, notes, graph, notifications, backdrop, home, prompts
+  styles/        base, clock, intro, journals, tags, todo, habits, timer, settings,
+                 sidebar, schedule, notes, graph, notifications, backdrop, home, prompts, fonts, quote
   js/
     app.js           entry point: load state, then wire views
     state.js         cache of main-process state + the only bridge calls
@@ -84,11 +88,12 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     sidebar.js       Notion-style sidebar: hide / show, Ctrl+\
     schedule.js      the schedule: views, draw/move/stretch gestures, editor, date helpers
     notes.js         Notes section: sidebar tree + notes view + links between notes
-    graph.js         graph view: every note and folder on a canvas (§17)
+    graph.js         graph view: every note and folder on a canvas (§16)
     journals.js      journals list, tabs, display modes, note editor
     journal-streak.js  contribution grid + the daily goal toast
     todo.js          to-do page, homepage card, tick box, reminder toast
     habits.js        habit tracker: grid, today's tick boxes, daily goal toast
+    timer.js         Timer page: countdowns, alarm, sidebar badge (section 19)
     clock.js         homepage clock: ticks, hands, readout
     settings.js      appearance prefs, font registry, Settings UI
     tags.js          tag row, create panel, reuse picker
@@ -99,29 +104,37 @@ src/renderer/    rendering only; no fs, no business logic, no authority
     mood.js          homepage "How are you feeling?" card + Mood log page
     prompts.js       journal prompts, empty-page nudge, plain/lines/grid paper
     prompts-data.js  the Gratitude and "Surprise me" prompt lists
+    quotes.js        the homepage quote list (see "Homepage quote")
+    todo-parse.js    typed times in the to-do input (pure, no DOM)
+    icons.js         the 58 pixel icons, built from path data (no runtime fetch)
+    dialog.js        confirmDialog(): the retro modal for deletes
+    chrome.js        title bar and status row for every view
+    spring.js        the shared under-damped Spring (the ink is its default paint)
+    sound.js         typing clicks (Web Audio, off by default) and the timer alarm
+    (styles/retro.css is the shared component kit; see section 17)
 
+renderer/fonts/       IBM Plex Mono, OFL; the licence texts are alongside
+renderer/backgrounds/ bundled preset backdrops; credits in its README
+
+scripts/build-icons.py       every logo size from the master artwork (Pillow)
 scripts/check.js             the model-layer checks
 assets/          icon.ico + icon.png, the app icon (see "The app icon")
 imgs/            source artwork supplied by the user; not read at runtime
 todo.md            roadmap and known gaps
 ```
 
-`main.js.pre-restructure.bak` and `notifications.js.pre-restructure.bak` are
-the pre-restructure originals, and `backups/` holds an older copy of `src/`.
-They are the only history from before git was set up (§9), and they are in the
-first commit, so they can now be deleted from the working tree if wanted.
+The two `.pre-restructure.bak` files were deleted on 2026-10-23; their history is
+in commit `6336f28`. `backups/` holds an older copy of `src/` and is kept for now.
 
 ---
 
 ### Chrome that belongs to only some views
 
 `views.js` writes the active view id to `document.body.dataset.view`, and CSS
-keys off it. The habit bar uses this: it is `position: fixed` at the bottom, so
-any view it covers would have to reserve 140px of bottom padding or its content
-scrolls underneath — which is exactly what happened to the journals calendar.
-Rather than every view paying that cost, the bar is shown only on `home` and
-`habit-page`. Anything else fixed to an edge should be scoped the same way, and
-`initViews()` seeds the attribute before the first navigation so it is correct
+keys off it. The fixed habit bar used this rule until it was removed on 2026-10-21 (see
+"Homepage layout"). The rule still holds for any fixed edge element: over a
+scrolling view it eats the content underneath, so scope it by view.
+`initViews()` seeds the attribute before the first navigation, so it is correct
 on first paint.
 
 ### Chrome that reveals on hover
@@ -231,7 +244,7 @@ because misattributed quotes are common.
 
 ### Logo, scrollbar
 
-The brand (`.brand`, the "e" mark) is `position: fixed`, so scrolled content
+The brand (`.brand`, the logo mark) is `position: fixed`, so scrolled content
 passes underneath it. It carries a `filter: drop-shadow(...)` halo in the page
 colour (`--bg`), which knocks back content around the letters. Because the
 colour is the page background it is invisible on an empty page and follows dark
@@ -251,9 +264,8 @@ field). The fixed bottom `.habit-bar` was **removed** on 2026-10-21, so no view
 reserves bottom padding for it any more (the "view-scoped chrome" note above is
 still the rule for anything fixed). Homepage card styles beyond the to-do card
 are in `styles/home.css`. The to-do card: the clock on the left
-(`.home-row` > `.home-clock`), the **to-do card** beside it (`.todo-card`). The card's heading is
-lowercase `to-do's` and it currently shows only the empty-state line,
-"Everything is done for the day!". Real to-do items are not built yet.
+(`.home-row` > `.home-clock`), the **to-do card** beside it (`.todo-card`). The card's heading is lowercase `to-do's`. It lists today's tasks, with
+remember-items on one dashed line below (§15).
 
 ### The homepage clock
 
@@ -288,7 +300,8 @@ body        font-family: var(--font-ui, system-ui, sans-serif)
 ```
 
 Everything else inherits, including buttons, inputs and the journal editor, so
-a new surface needs no font rule of its own. **Do not pin a family anywhere.**
+a new surface needs no font rule of its own. **Never write a family name in a component rule.** Families come from tokens only:
+`--font-ui` (body, set by Settings), `--font-display` (headings, the pixel face).
 The journal editor used to hard-code Times New Roman and was the one place the
 setting could not reach.
 
@@ -301,7 +314,7 @@ setting would be lying. `settings.js` measures each candidate against a
 deliberately absent family and marks any that are missing, rather than letting
 a fallback masquerade as the chosen face.
 
-**Two choices: IBM Plex Mono (default, `FONTS[0]`) and System UI.** Plex Mono is the first
+**Three choices: IBM Plex Mono (default, `FONTS[0]`), Pixelify Sans and System UI.** Plex Mono is the first
 *shipped* face: five TTFs in `renderer/fonts/` (OFL 1.1, see its README),
 declared in `styles/fonts.css`, so it needs no `probe`. `applyFont()` also sets
 `html[data-font]`, and `fonts.css` uses it to tune the mono face (lighter
@@ -312,30 +325,69 @@ relies on an installed font.
 Stored preferences that name a removed font fall back to System UI, because
 `load()` only accepts ids that are still in `FONTS`.
 
-### The app icon
+### Themes and tokens (retro redesign, 2026-10-23)
 
-The Ethos logo is a white, italic lowercase "e" followed by a full stop, on
-black. The user's original is `imgs/logo(1).png` (800x800, palette PNG). It
-replaces Electron's default icon on the window, title bar and taskbar.
+Colours, borders and fonts come from custom properties on `:root` (light) and
+`body.dark` (dark) at the top of `styles/base.css`. Components use the names;
+they never write a colour that a theme should own.
 
-- `assets/icon.ico` (16, 24, 32, 48, 64, 128, 256) and `assets/icon.png`
-  (512x512) are generated from that source with Pillow (`Image.LANCZOS`).
-  Re-run the resize if the artwork changes; there is no build script yet.
-- `src/main/index.js` passes `icon: ICON` in `windowOptions()`: the `.ico` on
-  Windows (crisp at every taskbar size), the PNG elsewhere.
-- `assets/` sits **outside `src/renderer`** on purpose. The `app://` handler
-  only serves files inside `src/renderer`, so the icon is never reachable from
-  the page.
-- Still on the old mark: the **tray icon** (`tray.js`, a dot beside a ring
-  drawn in code) and the **in-app brand and intro "e"** (inline SVG set in
-  Helvetica, `index.html` and `intro.js`). They were left alone because the
-  request was to replace the Electron logo. The new logo is a different
-  letterform from the SVG "e" (italic, with a full stop), so swapping those
-  would be a design decision, not a swap.
-- `npm start` runs `electron.exe`, so a *pinned* taskbar shortcut and Task
-  Manager still show Electron's icon in development. The window itself shows
-  the Ethos icon. A packaged build needs the `.ico` handed to the packager as
-  the executable icon; no packager is configured yet.
+- **Light is "98":** grey page and window faces (`--bg`, `--face`), white fields
+  (`--field`, `--card`), 1px grey borders (`--line`), black text (`--muted` is black too), a deep teal
+  accent (`--accent`) and pale green title bars, so nothing clashes with the teal
+  desktop. Every view is an opaque window on the desktop, so no text sits on the
+  pattern (user's call, 2026-10-23: grey text on teal was unreadable).
+- **Dark is the ethos website's palette** (tube black, phosphor blue-white), taken
+  from `H:\ethos web\site\assets\ethos.css`.
+- **Square corners.** `--radius` is 0. The round clock face is the one exception.
+- **Depth from bevels, not shadows.** `--bevel-out`, `--bevel-in` and
+  `--bevel-field` are inset shadows. Blurred outer shadows and
+  `backdrop-filter` were removed: panels are opaque. Focus rings and selected
+  outlines (`0 0 0 1.5px`) remain.
+- **Status colours** are tokens too: `--danger`, `--ok`, `--warn`. Event colours
+  stay on the tag palette (`TAG_COLORS`).
+- **Fonts:** `--font-ui` (Plex Mono, body), `--font-display` (Ethos Pixel Sans, a
+  pixel MS Sans Serif recreation, CC BY-SA; see `fonts/README.md`), set at 11,
+  22 or 33px. Pixelify Sans is the fallback and a body choice in Settings. Pixelify Sans is the pixel face because it reads in upper and lower
+  case; Silkscreen and VT323 were considered and dropped (PLAN-retro-demo.md, 0a).
+- Keyboard focus is a 1px dotted outline inside the control (`base.css`).
+
+The full plan and the user's answers are in `PLAN-retro-demo.md`.
+
+### The app icon and the logo
+
+The Ethos logo is `imgs/new logo [1].png` (800x800, RGBA): a black disc with a
+white "e]" and an orbit ring. It is the logo for the whole software, from
+2026-10-22 (userref). The earlier "e." mark (`imgs/logo(1).png`) is kept in
+`imgs/` as history only.
+
+`scripts/build-icons.py` makes every size from that source, with Pillow. Run it
+with `python -I scripts/build-icons.py` whenever the artwork changes. It writes:
+
+- `assets/icon.ico` (16 to 256) and `assets/icon.png` (512): the window, the
+  taskbar and the Electron icon. `src/main/index.js` passes `icon: ICON`: the
+  `.ico` on Windows, the PNG elsewhere.
+- `assets/tray-16.png` and `tray-16@2x.png`: the tray icon (`tray.js` loads the
+  file; Electron picks the @2x copy on high-DPI screens). At 16px the artwork is
+  cropped to its middle before it is shrunk.
+- `src/renderer/img/logo-64/128/512.png`: page copies of the logo (the page can
+  only load files under `src/renderer`). Unused since 2026-10-23: the brand mark
+  and the intro went back to the "•e" drawn as SVG.
+
+`assets/` sits **outside `src/renderer`** on purpose: the `app://` handler only
+serves files inside `src/renderer`, so `assets/` is never reachable from the
+page. The page copies live in `src/renderer/img/`.
+
+`npm start` runs `electron.exe`, so a *pinned* taskbar shortcut and Task Manager
+still show Electron's icon in development. A packaged build needs the `.ico`
+handed to the packager as the executable icon (`win.icon` in the electron-builder
+config, once it is added).
+
+The launch intro (`js/intro.js`, `styles/intro.css`) is a short boot sequence on
+black (three status lines), then the big "e" with a ring drawn round it, which
+shrinks into the "•e" brand mark at the top left (an inline SVG in
+`index.html`, coloured by `--fg`). The boot text is hidden in the same frame the
+e appears (one class, `.e-in`), so the two never share the screen. About 3.65s.
+A key press or a click skips it. Reduced motion skips it.
 
 ## 4. The four layers, and the rule for each
 
@@ -518,7 +570,7 @@ quarantined file is never re-read.
 
 ## 7. IPC surface
 
-Twenty-five channels. Each returns `{ ok: true, ... }` or `{ ok: false, error }`;
+Twenty-seven channels. Each returns `{ ok: true, ... }` or `{ ok: false, error }`;
 the preload unwraps that into a normal promise, so renderer code uses
 try/catch. Exceptions never cross the bridge — a main-process stack is not
 something a renderer should see.
@@ -550,13 +602,16 @@ something a renderer should see.
 | `pages:create` | `ethos.pages.create({folderId, temporary})` | `page` + snapshot |
 | `pages:update` | `ethos.pages.update(id, patch)` | `page` + snapshot (patch may carry `links`) |
 | `pages:delete` | `ethos.pages.remove(id)` | `deleted` + snapshot |
+| `timers:arm` | `ethos.timers.arm(id, {endsAt, label, notify})` | nothing (main holds the deadline; section 19) |
+| `timers:disarm` | `ethos.timers.disarm(id)` | nothing |
 
 `events:create` / `events:update` also take `color` and `remindMinutes`.
 
-There are two **main to page** events. `reminder` (to-dos), exposed as
+There are three **main to page** events. `reminder` (to-dos), exposed as
 `ethos.onReminder(callback)`, hands over `id`, `title`, `minutes`.
 `event-reminder` (schedule), exposed as `ethos.onEventReminder(callback)`,
-hands over `id`, `title`, `date`, `startMinute`. Plain data only: the IPC
+hands over `id`, `title`, `date`, `startMinute`. `timer-done`, exposed as
+`ethos.onTimerDone(callback)`, hands over `id`. Plain data only: the IPC
 event object, and with it the sender, never crosses. Both return an
 unsubscribe function.
 
@@ -616,9 +671,10 @@ deliver a reminder that came due while the app was closed into a page that had
 not loaded, and it would be marked sent and lost.
 
 **Closing the window** hides it to the tray only while a reminder is still
-pending (`store.hasUpcomingReminders()`); otherwise the app quits as before.
-Once the window is hidden and nothing is left to remind about, the app quits
-by itself (`onIdle`). `webPreferences.backgroundThrottling` is `false`, since a
+pending (`store.hasUpcomingReminders()`) or a timer is running
+(`timers.hasArmed()`); otherwise the app quits as before. Once the window is
+hidden, nothing is left to remind about and no timer runs, the app quits by
+itself (`onIdle`). A timer that rings while the window is hidden brings it back. `webPreferences.backgroundThrottling` is `false`, since a
 hidden page is exactly when it is being relied on. The tray icon is drawn in
 `tray.js` with zlib rather than shipped as a file. Quit for real from the tray
 menu. `isQuitting` is set first thing in `before-quit`, which is what lets the
@@ -639,7 +695,8 @@ notify.error(title, message)     // an action failed; message is err.message
 notify.show({ title, message, type, duration, action })
 ```
 
-The surface is translucent with a backdrop blur, enters on the app's spring
+The surface is an opaque retro window (styles/notifications.css; no blur, see section 17),
+enters on the app's spring
 (`cubic-bezier(0.34, 1.42, 0.64, 1)`) and leaves faster and without overshoot —
 a bounce on the way out reads as indecision. The height collapse on `.out` is
 what slides the rest of the stack down. The countdown length is passed from JS
@@ -801,7 +858,8 @@ Tracked in `todo.md`; repeated here because they shape design choices.
 - The vault is **plain unencrypted JSON** under `userData`.
 - No vault backup or export.
 - Tag rename and recolour work in the model but have **no UI**.
-- Deleting a note has no undo and no confirmation. Deleting an event at least
+- Deleting a note or a journal asks first (js/dialog.js), but there is still no undo.
+  Deleting an event at least
   names it in a toast.
 - **Events accept `tagIds` in the model but there is no UI to set them.**
 - The schedule has no recurring or multi-day events, and a timed event cannot
@@ -819,20 +877,18 @@ Tracked in `todo.md`; repeated here because they shape design choices.
 - Real operating-system notification delivery has not been exercised on a
   second machine. The scheduler's choice to raise one is tested; the banner
   itself is Electron's `Notification`.
-- A to-do's title cannot be edited in the UI (the model supports it), and past
-  days cannot be ticked from the habit page (the model supports it too).
+- Past days cannot be ticked from the habit page (the model supports it).
 - The habit grid duplicates the drawing code in `journal-streak.js`. They share
   only CSS. A shared `drawGrid` would remove it.
 - The homepage scrolls at small window heights now that the to-do card is
   bigger.
-- Settings has only an Appearance section. No text size, no data/vault
+- Settings has Appearance, Background and Sound. No text size, no data/vault
   controls, no account section.
 - Reminders reach Windows only. Nothing reaches a phone yet (§1).
 - No TypeScript, no linter; `scripts/check.js` is a hand-rolled runner.
-- `test.txt` is an empty leftover, unrelated to anything.
 
 Given the subscription direction, encryption at rest and export are the two
-worth doing before the habit tracker.
+worth doing before a paid release.
 
 ---
 
@@ -849,15 +905,15 @@ worth doing before the habit tracker.
 | `tagIds` array with a one-tag UI | many-to-many later is UI work, not a migration |
 | Event dates as local `YYYY-MM-DD`, times as minutes from midnight | no timezone in the record; sorting and overlap are arithmetic |
 | Events in one file, notes one file each | records vs. documents; see §5 |
-| The schedule was built before the habit tracker | user's call, 2025-10-18; it also exercised the migration path while the vault was still young |
-| Schedule UI removed, model kept | user's call, 2025-10-18: it needs rework, and keeping the validated model makes resuming cheap |
+| The schedule was built before the habit tracker | user's call, 2026-10-18; it also exercised the migration path while the vault was still young |
+| ~~Schedule UI removed, model kept~~ *(superseded 2026-10-19: the schedule was rebuilt)* | user's call, 2026-10-18: it needs rework, and keeping the validated model makes resuming cheap |
 | View-scoped chrome via `body[data-view]` | a fixed bar over a scrolling view silently eats its content; see §3 |
 | One `--font-ui` for the whole app | the editor's hard-coded serif was the one surface the setting could not reach |
 | The plan is computed in main, not the page | reminders have to fire with the window closed, and two copies of the plan would disagree |
 | To-dos chain end to end from now | the user asked for finish times across several tasks; per-task fixed start times were not requested |
 | Close hides to the tray only while a reminder is pending | running in the background for the whole session would be an unwelcome surprise for an app with nothing to remind about |
 | Reminder scheduler waits for the page | an overdue reminder at launch must not be sent into a page that has not loaded |
-| The Ethos "e." logo is the app icon | user's call, 2025-10-19: replaces Electron's default; tray and in-app marks left as they were |
+| The new logo (`imgs/new logo [1].png`) is the logo everywhere | user's call, 2026-10-22: app, executable, tray, in-app mark and intro. Replaces the "e." mark of 2026-10-19 (tray and in-app marks included this time) |
 | IBM Plex Mono is the default font | user's call: calm and professional across the whole app; System UI remains as an option. Shipped in `renderer/fonts`, never fetched |
 | Schedule rebuilt on the kept model; gestures over forms | user's call, 2026-10-19: Google Calendar-like but minimal, "drawing like liquid". References in `references/` |
 | Event reminders always raise a Windows banner | user asked for calendar alerts to reach Windows; to-dos keep the quieter in-front rule |
@@ -870,6 +926,20 @@ worth doing before the habit tracker.
 | Note links stored by id on the page (`links`), not as `[[Title]]` text | a title in the text breaks on rename; an id cannot. Same rule as tags (§5) |
 | The graph only reads the model; links are made in the note | one place that writes links; the graph stays a picture |
 | Graph drawn on a canvas with a hand-written force layout | no library under the CSP; a few hundred nodes stay cheap; springs match the schedule's feel |
+| Retro look: "98" light, the ethos website's palette in dark, square corners, bevels not shadows | user's call, 2026-10-22: "more retro, more vintage and more boxy", like the ethos website. Plan in PLAN-retro-demo.md |
+| One pixel face for headings (Pixelify Sans) | user's call, 2026-10-23: a pixel face that reads in upper and lower case. Silkscreen (caps only) and VT323 were dropped |
+| Plex Mono stays the body font | readability over long text; the pixel face is for headings, labels and buttons |
+| The launch intro is a boot sequence, then the e and ring | user's call, 2026-10-23: keep the boot text and bring back the e with the spinning ring; the boot text goes the moment the e appears. The brand mark is the small "•e" again, not the logo PNG |
+| Dark theme is the ethos website's palette | user's answer, 2026-10-23: "just like the ethos website". The site lives in `H:\ethos web\` |
+| Headings use one pixel face, Pixelify Sans | user's answer, 2026-10-23: upper and lower case, a general-purpose face. Silkscreen and VT323 dropped |
+| Typing sounds are synthesised and off by default | no audio files, no CSP change; a sound out of nowhere in a work app is a bad first impression |
+| Deleting a note or a journal asks first | the deletes cannot be undone, and the toast came after the fact |
+| The demo edition hides systems; main does not gate them yet | the renderer is untrusted. Entitlement checks belong in main when they exist (section 1) |
+| Installer is unsigned for now | user's answer, 2026-10-23: the app runs under Electron and gets a proper executable later |
+| Timers live in localStorage; their deadlines in main | user's call, 2026-10-23: a timer page with alarms and notifications. A timer list is per-machine, like Settings; the deadline is in main so it rings with the window hidden |
+| A finished timer always shows the in-app toast; the Windows banner and the alarm are per-timer switches | the user asked for an alarm option and a notification option. A timer that rings while hidden in the tray raises the window |
+| Headings use Ethos Pixel Sans (a pixel MS Sans Serif recreation) | user's call, 2026-10-23: Pixelify was off-putting. CC BY-SA 3.0, attribution in fonts/README.md. Supersedes the Pixelify row above |
+| Light mode: black text, teal accent, pale green title bars, views as opaque windows | user's call, 2026-10-23: grey text on the teal desktop was unreadable, and navy clashed with the teal |
 
 ---
 
@@ -879,8 +949,7 @@ worth doing before the habit tracker.
   of `<body>`, fixed, no z-index, `pointer-events: none`, so everything paints
   over it. `body[data-bg]` = off | gradient | image, `body[data-bg-scope]` =
   home | all. Always under a `--bg` veil (0.42 light / 0.5 dark / 0.72 image):
-  **that veil is the readability guarantee; do not weaken it.** Default is
-  gradient on the homepage. Gradient: palettes aurora / dawn / ocean / forest /
+  **that veil is the readability guarantee; do not weaken it.** Default is the desktop pattern, on every view (section 17). Gradient: palettes aurora / dawn / ocean / forest /
   dusk (light + dark variants in CSS via `body[data-bg-palette]`) or custom
   (three colours set inline as `--bd-a/b/c`, hex-validated), speed slow / normal
   / fast via `body[data-bg-speed]`. Image: eight bundled Unsplash presets in
@@ -906,11 +975,11 @@ worth doing before the habit tracker.
 - **Journal list**: "+ New Journal" now sits under the tabs, search and filter
   bars, directly above the list.
 - **Journal prompts** (`prompts.js`). "Show prompts" is always visible top right
-  of the journal page. After `NUDGE_MS` (10s for testing; intended ~30s) of no
+  of the journal page. After `NUDGE_MS` (30s; the UI test shortens it through `ethos.test.nudgeMs`) of no
   typing on a page with fewer than 12 characters, a nudge offers prompts, once
   per idle spell. Panel: Gratitude / Surprise me, Another, Use this (inserts the
   prompt as the first line and saves), No thanks. Lists are in `prompts-data.js`,
-  written for Ethos (journalling.txt was empty; bugs.md 8.1).
+  the Gratitude list is the 50 prompts from `references/journalling.txt` (loaded 2026-10-23; bugs.md 8.1).
 - **Paper**: Plain / Lines / Grid on every journal page. Rules are `1lh` apart so
   they follow the font size, `background-attachment: local` so they scroll with
   the text. Per note in localStorage `ethos.paper` (`{ notes: {id: mode}, last }`),
@@ -950,7 +1019,7 @@ say when the day's work ends. All wording in the UI is our own.
   "Show schedule" action. The existing "Time's up" reminder still fires at `dueAt`.
 - Homepage card lists tasks only, with remember items on one dashed line below.
 
-## 17. Note links and the graph view (2026-10-21)
+## 16. Note links and the graph view (2026-10-21)
 
 Modelled on Obsidian's graph. Covers the Notes section (pages and folders);
 journal notes are not in it.
@@ -993,7 +1062,64 @@ journal notes are not in it.
 
 ---
 
-## 16. Start here (for the next session)
+## 17. Retro redesign and demo (2026-10-23)
+
+Plan and the user's answers: `PLAN-retro-demo.md` (its section 0a overrides the
+rest; section 6 there records what was done and what was left).
+
+- **Look.** Light is "98": grey faces, white fields, black text, a teal accent, pale
+  green title bars, and every view an opaque window on the teal desktop. Dark is the
+  ethos website's palette (`ethos web/site/assets/ethos.css`). Radii are 0, except
+  the round clock face. Depth comes from bevels (`--bevel-out/in/field`), not
+  blurred shadows; no `backdrop-filter`. Status colours are `--danger`, `--ok`,
+  `--warn`. Section 3 "Themes and tokens" has the token list.
+- **Fonts.** `--font-ui` (IBM Plex Mono, body) and `--font-display` (Ethos Pixel
+  Sans: a pixel MS Sans Serif recreation for headings, window titles and toast
+  titles; 33px h1, 22px h2, 11px bold in title bars). It replaced Pixelify Sans on
+  2026-10-23. One pixel face, because it reads in
+  upper and lower case. Silkscreen and VT323 were dropped.
+- **Kit** (`styles/retro.css`). Defaults for `button` and fields are bevels. Also:
+  `.win`, `.win-title`, `.win-btn`, `.win-status`, `.menu`, `.menu-item`, `.group`,
+  `.tabs`, `.progress`, `.dither`, `.dlg-*`. Components override any default.
+- **Icons** (`js/icons.js`). 54 pixelarticons (MIT; `src/renderer/icons/`), built
+  into the module as path data, so nothing is fetched. `icon(name, size)` builds
+  the element; `hydrateIcons()` fills `[data-icon]` in the markup (the sidebar).
+- **Windows** (`js/chrome.js`). Every view gets a title bar (`HOME`, `TODO.EXE`,
+  …) with a hide-sidebar box and, away from Home, a close box. Every view except
+  Home gets a status row, filled from the state cache.
+- **Sidebar.** A Start menu: a raised panel, rows that go navy on hover, the
+  active row sunken.
+- **Backdrop.** A `pattern` mode is the default: teal desktop, dither, grid or
+  scanlines (Settings > Background). Scanlines (`#crt`) are optional and dark only.
+  Photos and gradients still work. The readability veil applies to images only.
+- **Dialogs.** `js/dialog.js` `confirmDialog()`. Note and journal deletes ask first.
+- **Motion** (`js/spring.js`, `retro.css`). The Spring is shared; the ink is its
+  default paint. Buttons press in and spring back. A view opens in three opacity
+  steps (opacity only, so fixed popovers keep their containing block).
+- **Typing sounds** (`js/sound.js`). Clicks synthesised with the Web Audio API, so
+  no audio ships and the CSP is unchanged. Off by default; a one-time toast offers
+  them; Settings > Sound has On/Off and a volume. The editors carry
+  `data-typing-sound`.
+- **Logo and intro.** `scripts/build-icons.py` makes every size from
+  `imgs/new logo [1].png` (app, installer, tray). The launch is a boot sequence,
+  then the e and ring; the in-app mark is the "•e" SVG (section 3).
+- **Demo edition** (`src/main/edition.js`). Default `demo`. `ETHOS_EDITION` overrides
+  it only in an unpackaged run (the test harness uses `full`). `state:load` reports
+  `edition`, `version` and `packaged`. Systems marked `data-full-only` (the Mood
+  log, its homepage card, Blockers) are hidden in the demo, and `views.show()`
+  sends a navigation to them Home. This decides only what the page shows; the
+  renderer is untrusted, so any real entitlement check must live in main.
+- **Installer.** `npm run dist` (electron-builder 26.15.3, NSIS, asar, en-GB and
+  en-US locales). Unsigned, on purpose for now. The packaged app runs; its data
+  folder is the same `%APPDATA%\Ethos` as the dev build, so a packaged run uses
+  the real vault.
+
+What is not done yet (section 6 of the plan): the journal menu bar, the notes
+folder grid, the clock restyle, the two-window to-do page, the settings tabs, the
+sliding sidebar highlight, the journal name in a window title, and the "alive"
+details of 7.4. The Windows banner has not been seen on a desktop.
+
+## 18. Start here (for the next session)
 
 Read in this order, and stop as soon as you have what you need. Only open a
 source file once a section here or in `Efficiencies.md` has sent you to it.
@@ -1023,9 +1149,10 @@ source file once a section here or in `Efficiencies.md` has sent you to it.
 | Note links / graph | `pages:update` (`links`), `store.deletePage` | `js/notes.js`, `js/graph.js` | `check.js` note links, `ui-test.js` graph section |
 | Prompts / paper | none (local prefs) | `js/prompts.js`, `js/prompts-data.js` | `ui-test.js` journal section |
 | Backdrop / settings | none (local prefs) | `js/backdrop.js`, `js/settings.js` | `ui-test.js` background section |
+| Timer | `src/main/timers.js`, IPC `timers:*` | `js/timer.js` (list in localStorage) | `check.js` timers, `ui-test.js` timer section |
 
 ### Rules for the next session
-- **Run `npm run check` (84 checks) and `npm run test:ui` (55 checks)** before
+- **Run `npm run check` (88 checks) and `npm run test:ui` (89 checks)** before
   and after any change. Use `env -u ELECTRON_RUN_AS_NODE` in VS Code terminals.
 - **Log every change here or in `progress.md`**, and every bug you notice in
   `bugs.md`, not inline.
@@ -1039,3 +1166,41 @@ source file once a section here or in `Efficiencies.md` has sent you to it.
 - Packaging: Electron with electron-builder (about 80-95 MB installer) or a
   rewrite to Tauri (about 5-10 MB). See Efficiencies.md.
 
+## 19. Timer (2026-10-23)
+
+User's call: "a simple timer system which includes various customisable timers,
+an alarm option and notification option to alert the user once time is up", in
+the same retro layout as the rest of the app. In the demo edition too.
+
+- **Page** (`#timer-page`, `js/timer.js`, `styles/timer.css`). A "New timer" group
+  box (name, hours / minutes / seconds, quick lengths 1 min to 1 hour, Alarm and
+  Notification switches, which are buttons with `aria-pressed`), then one small
+  window per timer: a sunken readout in the pixel face at 33px, a block progress
+  bar, Start / Pause / Resume, Reset, Edit, and the two switches. Delete is the
+  title bar's close box. Up to 50 timers, each up to 99:59:59. Editing a timer
+  puts it back to idle at its new length.
+- **States.** idle, running (`endsAt`, wall-clock ms), paused (`left`, ms), done.
+  The list is in `localStorage['ethos.timers']` (`{ v: 1, timers }`), cleaned on
+  load: anything malformed is dropped. Per-machine, like Settings.
+- **Who rings it.** `src/main/timers.js` holds each running timer's deadline,
+  armed by the page (`timers:arm`) and disarmed on pause, reset, edit or delete.
+  One timeout for the next deadline, never longer than a minute, so a machine
+  that slept is caught within a minute. On `timer-done` the page marks it done,
+  shows the "Time's up" toast (always), starts the alarm if that timer's alarm is
+  on, and main raises the Windows banner if its notification is on. Main forgets
+  every timer on `state:load`; the page arms its running timers again, so a timer
+  the page no longer has cannot ring.
+- **Restart.** A timer still to come is armed again. One that ran out while Ethos
+  was closed is shown as done, without an alarm, with one toast listing them.
+- **Alarm** (`sound.js` `startAlarm` / `stopAlarm`). Four square-wave beeps every
+  1.4s, synthesised, for up to a minute. It follows the Settings volume with a
+  floor of 20%, and plays whatever the typing-sound setting is. With the alarm on,
+  the toast stays up with "Stop alarm"; the card's button reads Stop.
+- **Badge.** While a timer runs, the sidebar's Timer row shows the time left on
+  the next one to ring. The ticker (250ms) runs only while something is running,
+  and rewrites the readouts only while the page is open.
+- **Status row.** "N running · N finished", or the count. Timers are not in the
+  vault, so `timer.js` fires `ethos:timers` on the document and `chrome.js`
+  redraws the row.
+- **Icons.** `play`, `pause`, `notification` and `hourglass` added from
+  pixelarticons 1.8.1 (same MIT set).

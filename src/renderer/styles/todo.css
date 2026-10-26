@@ -2,14 +2,14 @@
    homepage card. */
 
 #todo-page { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
-#todo-page h1 { font-size: 36px; font-weight: 700; margin: 0; letter-spacing: -0.02em; }
+#todo-page h1 { font-size: 33px; font-weight: 700; margin: 0; }
 
 /* === Tick box ===
    Empty it is an outlined square. Done, it fills solid with the foreground
    colour, so a finished item reads as dark on a light page and light on a dark
    page. This is the same signal the contribution grids use. */
 .tick { flex: none; width: 20px; height: 20px; padding: 0; border: 1.5px solid var(--muted);
-        border-radius: 5px; background: transparent; color: var(--bg); cursor: pointer;
+        border-radius: var(--radius); background: transparent; color: var(--bg); cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         transition: background 0.22s ease, border-color 0.22s ease, transform 0.22s cubic-bezier(0.34, 1.42, 0.64, 1); }
 .tick:hover { border-color: var(--fg); transform: scale(1.06); }
@@ -20,16 +20,16 @@
 
 /* === Date toolbar === */
 .td-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.td-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: 8px;
+.td-nav { width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius);
           background: transparent; color: var(--fg); cursor: pointer;
           display: flex; align-items: center; justify-content: center;
           transition: border-color 0.15s, background 0.15s; }
 .td-nav:hover { border-color: var(--fg); background: var(--hover); }
-.td-date { padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px;
+.td-date { padding: 6px 10px; border: 1px solid var(--line); border-radius: var(--radius);
            background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
            outline: none; transition: box-shadow 0.15s; }
 .td-date:focus { box-shadow: 0 0 0 1.5px var(--fg); }
-.td-today { padding: 6px 14px; border: 1px solid var(--line); border-radius: 8px;
+.td-today { padding: 6px 14px; border: 1px solid var(--line); border-radius: var(--radius);
             background: transparent; color: var(--muted); font-family: inherit; font-size: 12px;
             cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .td-today:hover { border-color: var(--fg); color: var(--fg); }
@@ -38,17 +38,17 @@
 
 /* === Coaching line === */
 .td-coach { max-width: 1040px; padding: 14px 18px; border-left: 3px solid var(--fg);
-            border-radius: 4px 10px 10px 4px; background: var(--card); }
+            border-radius: var(--radius); background: var(--card); }
 .td-coach-main { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
 .td-coach-sub { margin: 4px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
 /* === Add form: one line, time typed in === */
 .td-add { display: flex; align-items: center; gap: 8px; max-width: 1040px; }
 .td-title { flex: 1; min-width: 0; padding: 12px 16px; border: 1px solid var(--line);
-            border-radius: 12px; background: var(--bg); color: var(--fg); font-family: inherit;
+            border-radius: var(--radius); background: var(--bg); color: var(--fg); font-family: inherit;
             font-size: 15px; outline: none; transition: box-shadow 0.15s; user-select: text; }
 .td-title:focus { box-shadow: 0 0 0 1.5px var(--fg); }
-.td-add-btn { padding: 12px 24px; border: 0; border-radius: 12px; background: var(--fg);
+.td-add-btn { padding: 12px 24px; border: 0; border-radius: var(--radius); background: var(--fg);
               color: var(--bg); font-family: inherit; font-size: 13px; font-weight: 600;
               cursor: pointer; transition: opacity 0.15s; }
 .td-add-btn:hover { opacity: 0.82; }
@@ -67,30 +67,30 @@
 .td-board { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 20px;
             max-width: 1040px; align-items: start; }
 @media (max-width: 900px) { .td-board { grid-template-columns: minmax(0, 1fr); } }
-.td-col { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 12px;
-          border: 1px solid var(--line); background: color-mix(in srgb, var(--card) 60%, transparent); }
+.td-col { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius);
+          border: 1px solid var(--line); background: var(--card); }
 .td-col-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.td-col-head h2 { margin: 0; font-size: 15px; font-weight: 700; }
+.td-col-head h2 { margin: 0; font-size: 22px; font-weight: 700; }
 .td-col-hint { font-size: 11px; color: var(--muted); }
-.td-rem-add input { width: 100%; padding: 9px 12px; border: 1px dashed var(--line); border-radius: 9px;
+.td-rem-add input { width: 100%; padding: 9px 12px; border: 1px dashed var(--line); border-radius: var(--radius);
   background: transparent; color: var(--fg); font-family: inherit; font-size: 13px; outline: none;
   transition: border-color 0.15s; user-select: text; }
 .td-rem-add input:focus { border-style: solid; border-color: var(--fg); }
 
 .td-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column;
-           gap: 6px; min-height: 44px; border-radius: 10px; transition: background 0.15s; }
+           gap: 6px; min-height: 44px; border-radius: var(--radius); transition: background 0.15s; }
 .td-list.drop-target { background: color-mix(in srgb, var(--fg) 4%, transparent); }
-.td-drop-line { height: 2px; margin: -4px 4px; border-radius: 2px; background: var(--fg); }
+.td-drop-line { height: 2px; margin: -4px 4px; border-radius: var(--radius); background: var(--fg); }
 
 .td-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 6px;
-           border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+           border: 1px solid var(--line); border-radius: var(--radius); background: var(--card);
            cursor: grab; outline: none;
            transition: background 0.18s, border-color 0.18s, opacity 0.25s, transform 0.25s cubic-bezier(0.34, 1.3, 0.64, 1); }
 .td-item:hover, .td-item:focus-visible { border-color: var(--muted); }
 .td-item.dragging { opacity: 0.35; transform: scale(0.98); }
 .td-item.done { opacity: 0.55; }
 .td-item.done .td-item-title { text-decoration: line-through; }
-.td-item.overdue { border-color: #f59e0b; }
+.td-item.overdue { border-color: var(--warn); }
 .td-item.remember { background: var(--bg); }
 .td-grip { flex: none; width: 10px; height: 18px; opacity: 0.35;
   background-image: radial-gradient(circle, var(--muted) 1.2px, transparent 1.6px);
@@ -98,19 +98,19 @@
 .td-item:hover .td-grip { opacity: 0.9; }
 .td-item-body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
 .td-item-title { font-size: 14px; font-weight: 600; overflow-wrap: anywhere; cursor: text; }
-.td-item-meta { padding: 1px 6px; margin-left: -6px; border: 0; border-radius: 6px; background: transparent;
+.td-item-meta { padding: 1px 6px; margin-left: -6px; border: 0; border-radius: var(--radius); background: transparent;
                 font-family: inherit; font-size: 12px; color: var(--muted); cursor: pointer;
                 font-variant-numeric: tabular-nums; transition: background 0.15s, color 0.15s; }
 .td-item-meta:hover { background: var(--hover); color: var(--fg); }
 .td-item-meta.empty { font-style: italic; opacity: 0.8; }
-.td-item.overdue .td-item-meta { color: #f59e0b; }
-.td-inline { width: 100%; padding: 4px 8px; border: 1px solid var(--fg); border-radius: 7px;
+.td-item.overdue .td-item-meta { color: var(--warn); }
+.td-inline { width: 100%; padding: 4px 8px; border: 1px solid var(--fg); border-radius: var(--radius);
              background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
              outline: none; user-select: text; }
 .td-item-tools { display: flex; align-items: center; gap: 2px; opacity: 0;
                  transition: opacity 0.18s ease; }
 .td-item:hover .td-item-tools, .td-item:focus-within .td-item-tools { opacity: 1; }
-.td-tool { width: 26px; height: 26px; border: 0; border-radius: 7px; background: transparent;
+.td-tool { width: 26px; height: 26px; border: 0; border-radius: var(--radius); background: transparent;
            color: var(--muted); cursor: pointer; display: flex; align-items: center;
            justify-content: center; transition: background 0.15s, color 0.15s; }
 .td-tool:hover { background: var(--hover); color: var(--fg); }
@@ -119,7 +119,7 @@
 
 /* === Blockers === */
 .td-blockers { margin-top: 18px; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
-.td-blockers-btn { padding: 8px 20px; border: 1px dashed var(--line); border-radius: 8px;
+.td-blockers-btn { padding: 8px 20px; border: 1px dashed var(--line); border-radius: var(--radius);
                    background: transparent; color: var(--muted); font-family: inherit;
                    font-size: 13px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .td-blockers-btn:hover { border-color: var(--fg); color: var(--fg); }
@@ -132,7 +132,7 @@
 .todo-card-item.done .name { text-decoration: line-through; color: var(--muted); }
 .todo-card-item .when { flex: none; font-size: 12px; color: var(--muted);
                         font-variant-numeric: tabular-nums; }
-.todo-card-remember { margin-top: 8px; padding: 8px 10px; border-radius: 8px; font-size: 12px;
+.todo-card-remember { margin-top: 8px; padding: 8px 10px; border-radius: var(--radius); font-size: 12px;
                       color: var(--muted); border: 1px dashed var(--line); overflow-wrap: anywhere; }
 
 @media (prefers-reduced-motion: reduce) {

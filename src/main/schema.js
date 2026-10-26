@@ -6,7 +6,7 @@
 // here, so a corrupt vault file or a malformed IPC call fails at one known
 // place instead of turning into `undefined` three layers deeper.
 
-const SCHEMA_VERSION = 7;
+const SCHEMA_VERSION = 8;
 const TODO_KINDS = ['task', 'remember'];
 
 const TAG_COLORS = [
@@ -422,6 +422,9 @@ function parsePage(raw) {
     // Absent on a v6 page, which reads as "links to nothing". A page never
     // links to itself.
     links: pageLinks(raw.links === undefined ? [] : raw.links, 'page.links').filter(l => l !== pageId),
+    // Absent on a v7 page: no tables, not pinned.
+    tables: pageTables(raw.tables === undefined ? [] : raw.tables, 'page.tables'),
+    pinned: raw.pinned === true,
     createdAt: timestamp(raw.createdAt, 'page.createdAt'),
     updatedAt: timestamp(raw.updatedAt, 'page.updatedAt'),
   };
@@ -443,9 +446,195 @@ function parsePagePatch(raw) {
   if ('content' in raw) patch.content = str(raw.content, 'patch.content', MAX_CONTENT, { trim: false });
   if ('folderId' in raw) patch.folderId = optFolderId(raw.folderId, 'patch.folderId');
   if ('links' in raw) patch.links = pageLinks(raw.links, 'patch.links');
+  if ('tables' in raw) patch.tables = pageTables(raw.tables, 'patch.tables');
+  if ('pinned' in raw) {
+    if (typeof raw.pinned !== 'boolean') fail('patch.pinned must be true or false');
+    patch.pinned = raw.pinned;
+  }
   if ('temporary' in raw) {
     if (typeof raw.temporary !== 'boolean') fail('patch.temporary must be true or false');
     patch.temporary = raw.temporary;
+  }
+  if (Object.keys(patch).length === 0) fail('patch is empty');
+  return patch;
+}
+
+// ─── Tables inside a Notes page ───
+// A page may carry tables. The page's text holds a marker line where each one
+// sits (`{{table:<id>}}`, see notes.js); the table itself lives here. Table,
+// column and row ids are short keys inside one page, not vault ids: nothing is
+// ever looked up or named on disk by them.
+//
+// Structure is checked strictly. A cell whose value does not fit its column's
+// type is dropped rather than failing the page, because a column can change
+// type after cells were filled, and a single stale cell must not cost the page.
+
+const TABLE_COL_TYPES = ['text', 'number', 'percent', 'progress', 'check', 'select', 'date'];
+const MAX_TABLES_PER_PAGE = 20;
+const MAX_TABLE_COLS = 20;
+const MAX_TABLE_ROWS = 500;
+const MAX_TABLE_TITLE = 100;
+const MAX_COL_NAME = 40;
+const MAX_CELL_TEXT = 2000;
+const MAX_SELECT_OPTIONS = 20;
+const MAX_OPTION = 40;
+
+function key(v, field) {
+  if (typeof v !== 'string' || !/^[a-z0-9]{1,24}$/.test(v)) fail(field + ' is not a valid key');
+  return v;
+}
+
+function cellValue(col, v) {
+  if (v === null || v === undefined) return undefined;
+  switch (col.type) {
+    case 'text': return typeof v === 'string' && v.length <= MAX_CELL_TEXT ? v : undefined;
+    case 'number': return typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+    case 'percent':
+    case 'progress': return typeof v === 'number' && Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : undefined;
+    case 'check': return v === true ? true : undefined;
+    case 'select': return typeof v === 'string' && col.options.includes(v) ? v : undefined;
+    case 'date': try { return isoDate(v, 'cell'); } catch { return undefined; }
+    default: return undefined;
+  }
+}
+
+function parseTable(raw, field) {
+  if (!isPlainObject(raw)) fail(field + ' must be an object');
+  if (!Array.isArray(raw.columns) || raw.columns.length < 1) fail(field + '.columns must be a non-empty array');
+  if (raw.columns.length > MAX_TABLE_COLS) fail(field + ' has more than ' + MAX_TABLE_COLS + ' columns');
+  if (!Array.isArray(raw.rows)) fail(field + '.rows must be an array');
+  if (raw.rows.length > MAX_TABLE_ROWS) fail(field + ' has more than ' + MAX_TABLE_ROWS + ' rows');
+  const columns = raw.columns.map((c, i) => {
+    const f = field + '.columns[' + i + ']';
+    if (!isPlainObject(c)) fail(f + ' must be an object');
+    if (!TABLE_COL_TYPES.includes(c.type)) fail(f + '.type is not a known column type');
+    const options = c.options === undefined ? [] : c.options;
+    if (!Array.isArray(options) || options.length > MAX_SELECT_OPTIONS) fail(f + '.options must be a short array');
+    return {
+      id: key(c.id, f + '.id'),
+      name: str(c.name === undefined ? '' : c.name, f + '.name', MAX_COL_NAME),
+      type: c.type,
+      options: [...new Set(options.map((o, j) => str(o, f + '.options[' + j + ']', MAX_OPTION)).filter(Boolean))],
+    };
+  });
+  if (new Set(columns.map(c => c.id)).size !== columns.length) fail(field + ' has duplicate column ids');
+  const rows = raw.rows.map((r, i) => {
+    const f = field + '.rows[' + i + ']';
+    if (!isPlainObject(r) || !isPlainObject(r.cells)) fail(f + ' must be an object with cells');
+    const cells = {};
+    for (const col of columns) {
+      const v = cellValue(col, r.cells[col.id]);
+      if (v !== undefined) cells[col.id] = v;
+    }
+    return { id: key(r.id, f + '.id'), cells };
+  });
+  if (new Set(rows.map(r => r.id)).size !== rows.length) fail(field + ' has duplicate row ids');
+  return {
+    id: key(raw.id, field + '.id'),
+    title: str(raw.title === undefined ? '' : raw.title, field + '.title', MAX_TABLE_TITLE),
+    columns,
+    rows,
+  };
+}
+
+function pageTables(v, field) {
+  if (!Array.isArray(v)) fail(field + ' must be an array');
+  if (v.length > MAX_TABLES_PER_PAGE) fail(field + ' has more than ' + MAX_TABLES_PER_PAGE + ' tables');
+  const tables = v.map((t, i) => parseTable(t, field + '[' + i + ']'));
+  if (new Set(tables.map(t => t.id)).size !== tables.length) fail(field + ' has duplicate table ids');
+  return tables;
+}
+
+// ─── Goals ───
+// One goal per horizon, shown on the homepage. Setting a horizon's goal again
+// replaces it; setting it to empty text clears it.
+
+const GOAL_HORIZONS = ['week', 'month', 'year'];
+const MAX_GOAL_TEXT = 200;
+
+function parseGoal(raw) {
+  if (!isPlainObject(raw)) fail('goal must be an object');
+  if (!GOAL_HORIZONS.includes(raw.horizon)) fail('goal.horizon must be week, month or year');
+  const text = str(raw.text, 'goal.text', MAX_GOAL_TEXT);
+  if (!text) fail('goal.text cannot be empty');
+  return {
+    id: id(raw.id, 'goal.id', 'g'),
+    horizon: raw.horizon,
+    text,
+    done: raw.done === true,
+    createdAt: timestamp(raw.createdAt, 'goal.createdAt'),
+    updatedAt: timestamp(raw.updatedAt, 'goal.updatedAt'),
+  };
+}
+
+function parseGoalInput(raw) {
+  if (!isPlainObject(raw)) fail('goal input must be an object');
+  if (!GOAL_HORIZONS.includes(raw.horizon)) fail('horizon must be week, month or year');
+  const out = { horizon: raw.horizon };
+  if ('text' in raw) out.text = str(raw.text, 'text', MAX_GOAL_TEXT);
+  if ('done' in raw) {
+    if (typeof raw.done !== 'boolean') fail('done must be true or false');
+    out.done = raw.done;
+  }
+  if (!('text' in out) && !('done' in out)) fail('goal input is empty');
+  return out;
+}
+
+// ─── Day notes ───
+// A note on one calendar day, filed under a section ("Studies") with a list of
+// subjects for that day. Several per day. Made for revision timetables.
+
+const MAX_SECTION = 40;
+const MAX_SUBJECTS = 20;
+const MAX_SUBJECT = 40;
+const MAX_DAYNOTE_TEXT = 2000;
+
+function subjects(v, field) {
+  if (!Array.isArray(v)) fail(field + ' must be an array');
+  if (v.length > MAX_SUBJECTS) fail(field + ' has more than ' + MAX_SUBJECTS + ' subjects');
+  const out = [];
+  const seen = new Set();
+  for (const [i, s] of v.entries()) {
+    const name = str(s, field + '[' + i + ']', MAX_SUBJECT);
+    if (name && !seen.has(name.toLowerCase())) { seen.add(name.toLowerCase()); out.push(name); }
+  }
+  return out;
+}
+
+function parseDayNote(raw) {
+  if (!isPlainObject(raw)) fail('daynote must be an object');
+  return {
+    id: id(raw.id, 'daynote.id', 'd'),
+    date: isoDate(raw.date, 'daynote.date'),
+    section: str(raw.section, 'daynote.section', MAX_SECTION) || 'General',
+    subjects: subjects(raw.subjects === undefined ? [] : raw.subjects, 'daynote.subjects'),
+    text: str(raw.text === undefined ? '' : raw.text, 'daynote.text', MAX_DAYNOTE_TEXT, { trim: false }),
+    done: raw.done === true,
+    createdAt: timestamp(raw.createdAt, 'daynote.createdAt'),
+    updatedAt: timestamp(raw.updatedAt, 'daynote.updatedAt'),
+  };
+}
+
+function parseDayNoteInput(raw) {
+  if (!isPlainObject(raw)) fail('daynote input must be an object');
+  return {
+    date: isoDate(raw.date, 'date'),
+    section: str(raw.section === undefined ? '' : raw.section, 'section', MAX_SECTION) || 'General',
+    subjects: subjects(raw.subjects === undefined ? [] : raw.subjects, 'subjects'),
+    text: str(raw.text === undefined ? '' : raw.text, 'text', MAX_DAYNOTE_TEXT, { trim: false }),
+  };
+}
+
+function parseDayNotePatch(raw) {
+  if (!isPlainObject(raw)) fail('patch must be an object');
+  const patch = {};
+  if ('date' in raw) patch.date = isoDate(raw.date, 'patch.date');
+  if ('section' in raw) patch.section = str(raw.section, 'patch.section', MAX_SECTION) || 'General';
+  if ('subjects' in raw) patch.subjects = subjects(raw.subjects, 'patch.subjects');
+  if ('text' in raw) patch.text = str(raw.text, 'patch.text', MAX_DAYNOTE_TEXT, { trim: false });
+  if ('done' in raw) {
+    if (typeof raw.done !== 'boolean') fail('patch.done must be true or false');
+    patch.done = raw.done;
   }
   if (Object.keys(patch).length === 0) fail('patch is empty');
   return patch;
@@ -483,6 +672,9 @@ const MIGRATIONS = {
   // 7 added page `links` (the graph view); parsePage defaults it, so an older
   // page reads as linking to nothing.
   7: (state) => state,
+  // 8 added goals (goals.json) and day notes (daynotes.json), both absent in an
+  // older vault, plus page `tables` and `pinned`, which parsePage defaults.
+  8: (state) => state,
 };
 
 function migrate(state) {
@@ -509,4 +701,6 @@ module.exports = {
   parseHabit, parseHabitInput, parseHabitToggle,
   parseMood, parseMoodInput,
   parseFolder, parseFolderInput, parsePage, parsePageInput, parsePagePatch,
+  parseGoal, parseGoalInput, parseDayNote, parseDayNoteInput, parseDayNotePatch,
+  TABLE_COL_TYPES,
 };

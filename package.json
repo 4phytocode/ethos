@@ -1,15 +1,50 @@
 {
   "name": "ethos",
-  "version": "1.0.0",
+  "version": "0.1.0-demo",
+  "productName": "Ethos",
   "description": "Ethos desktop display",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
     "check": "node scripts/check.js",
-    "test:ui": "electron scripts/ui-test.js"
+    "test:ui": "electron scripts/ui-test.js",
+    "icons": "python -I scripts/build-icons.py",
+    "dist": "electron-builder --win"
   },
   "license": "UNLICENSED",
+  "build": {
+    "appId": "com.ethos.app",
+    "productName": "Ethos",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "compression": "maximum",
+    "electronLanguages": [
+      "en-GB",
+      "en-US"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "shortcutName": "Ethos"
+    }
+  },
   "devDependencies": {
-    "electron": "^44.7.2"
+    "electron": "^44.7.2",
+    "electron-builder": "^26.15.3"
   }
 }

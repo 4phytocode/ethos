@@ -7,8 +7,17 @@
 
 const listeners = new Set();
 
-let cache = { notes: [], tags: [], events: [], todos: [], habits: [], folders: [], pages: [], moods: [] };
+let cache = { notes: [], tags: [], events: [], todos: [], habits: [], folders: [], pages: [], moods: [], goals: [], daynotes: [] };
 let tagColors = [];
+// Set by main on load. The renderer is untrusted, so this only decides what the
+// page shows (see src/main/edition.js).
+let edition = 'demo';
+let appVersion = '';
+let packaged = false;
+
+export function editionName() { return edition; }
+export function version() { return appVersion; }
+export function isPackaged() { return packaged; }
 
 export function notes() { return cache.notes; }
 export function tags() { return cache.tags; }
@@ -18,6 +27,11 @@ export function habits() { return cache.habits; }
 export function folders() { return cache.folders; }
 export function pages() { return cache.pages; }
 export function moods() { return cache.moods; }
+export function goals() { return cache.goals; }
+export function goal(horizon) { return cache.goals.find(g => g.horizon === horizon) || null; }
+export function dayNotes() { return cache.daynotes; }
+export function dayNotesOn(date) { return cache.daynotes.filter(d => d.date === date); }
+export function dayNote(noteId) { return cache.daynotes.find(d => d.id === noteId) || null; }
 export function moodOn(date) { return cache.moods.find(m => m.date === date) || null; }
 export function tagColorPalette() { return tagColors; }
 
@@ -56,6 +70,7 @@ function apply(res) {
       notes: res.notes, tags: res.tags, events: res.events || [],
       todos: res.todos || [], habits: res.habits || [],
       folders: res.folders || [], pages: res.pages || [], moods: res.moods || [],
+      goals: res.goals || [], daynotes: res.daynotes || [],
     };
   }
   for (const fn of listeners) fn(cache);
@@ -67,6 +82,9 @@ function apply(res) {
 export async function load() {
   const res = await window.ethos.loadState();
   tagColors = res.tagColors || [];
+  edition = res.edition === 'full' ? 'full' : 'demo';
+  appVersion = typeof res.version === 'string' ? res.version : '';
+  packaged = res.packaged === true;
   return apply(res);
 }
 
@@ -103,3 +121,9 @@ export async function removeFolder(id) { await apply(await window.ethos.folders.
 export async function createPage(input) { return (await apply(await window.ethos.pages.create(input))).page; }
 export async function updatePage(id, patch) { return (await apply(await window.ethos.pages.update(id, patch))).page; }
 export async function removePage(id) { await apply(await window.ethos.pages.remove(id)); }
+
+export async function setGoal(input) { return (await apply(await window.ethos.goals.set(input))).goal; }
+
+export async function createDayNote(input) { return (await apply(await window.ethos.daynotes.create(input))).daynote; }
+export async function updateDayNote(id, patch) { return (await apply(await window.ethos.daynotes.update(id, patch))).daynote; }
+export async function removeDayNote(id) { await apply(await window.ethos.daynotes.remove(id)); }

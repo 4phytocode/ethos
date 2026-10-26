@@ -1,22 +1,22 @@
 /* Tag row on a note, the create panel, and the reuse picker. */
 
 .jp-tag-row { display: flex; align-items: center; gap: 8px; min-height: 32px; margin-bottom: 12px; }
-.jp-tag-pill { display: inline-block; padding: 3px 12px; border-radius: 999px; font-size: 12px;
+.jp-tag-pill { display: inline-block; padding: 3px 12px; border-radius: var(--radius); font-size: 12px;
                font-weight: 600; color: #fff; }
 
 /* Create-tag button */
-.create-tag-btn { position: relative; padding: 4px 12px; border: 1px dashed var(--line); border-radius: 999px;
+.create-tag-btn { position: relative; padding: 4px 12px; border: 1px dashed var(--line); border-radius: var(--radius);
                   background: transparent; color: var(--muted); font-family: inherit; font-size: 12px;
                   cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .create-tag-btn:hover { border-color: var(--fg); color: var(--fg); }
 .create-tag-tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
-                      white-space: nowrap; padding: 6px 14px; border-radius: 8px; background: var(--fg);
+                      white-space: nowrap; padding: 6px 14px; border-radius: var(--radius); background: var(--fg);
                       color: var(--bg); font-size: 12px; pointer-events: none;
                       opacity: 0; transition: opacity 0.2s ease; }
 .create-tag-btn:hover .create-tag-tooltip { opacity: 1; }
 
 /* Panels (create and pick share the shell) */
-.tag-panel { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 14px;
+.tag-panel { display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: var(--radius);
              background: var(--card); width: 300px; margin-bottom: 8px;
              overflow: hidden; transform-origin: top left;
              opacity: 0; max-height: 0; transform: scale(0.95) translateY(-4px);
@@ -24,13 +24,13 @@
              padding-top: 0; padding-bottom: 0; pointer-events: none; }
 .tag-panel.open { opacity: 1; max-height: 160px; transform: scale(1) translateY(0);
                   padding-top: 16px; padding-bottom: 16px; pointer-events: auto; }
-.tag-panel input { padding: 9px 14px; border: 0; border-radius: 10px;
+.tag-panel input { padding: 9px 14px; border: 0; border-radius: var(--radius);
                    background: var(--bg); color: var(--fg); font-family: inherit; font-size: 13px;
                    outline: none; transition: box-shadow 0.15s; }
 .tag-panel input:focus { box-shadow: 0 0 0 1.5px var(--fg); }
 
 .tag-colors { display: flex; gap: 8px; }
-.tag-color-opt { width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0;
+.tag-color-opt { width: 24px; height: 24px; border-radius: var(--radius); border: 0; padding: 0;
                  display: flex; align-items: center; justify-content: center;
                  color: #ffffff; font-size: 12px; font-weight: 700; line-height: 1;
                  cursor: pointer; transition: box-shadow 0.15s, transform 0.15s; }
@@ -42,20 +42,20 @@
 .tag-color-opt.sel::after { content: '✓'; }
 
 .tag-panel-actions { display: flex; gap: 8px; }
-.tag-panel-actions button { flex: 1; padding: 8px 0; border: 0; border-radius: 10px; font-family: inherit;
+.tag-panel-actions button { flex: 1; padding: 8px 0; border: 0; border-radius: var(--radius); font-family: inherit;
                             font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
 .tag-panel-actions button:hover { opacity: 0.8; }
 .tag-save { background: var(--fg); color: var(--bg); }
 .tag-cancel { background: transparent; color: var(--muted); }
 
 /* Reuse-a-tag button and picker */
-.use-tag-btn { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px;
+.use-tag-btn { padding: 4px 12px; border: 1px solid var(--line); border-radius: var(--radius);
                background: transparent; color: var(--muted); font-family: inherit; font-size: 12px;
                cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .use-tag-btn:hover { border-color: var(--fg); color: var(--fg); }
 .use-tag-btn[hidden] { display: none; }
 .tag-pick-list { display: flex; flex-wrap: wrap; gap: 8px; }
-.tag-pick-opt { padding: 3px 12px; border: 0; border-radius: 999px; font-family: inherit;
+.tag-pick-opt { padding: 3px 12px; border: 0; border-radius: var(--radius); font-family: inherit;
                 font-size: 12px; font-weight: 600; color: #fff; cursor: pointer;
                 transition: box-shadow 0.15s, transform 0.15s; }
 .tag-pick-opt:hover { transform: scale(1.05); }

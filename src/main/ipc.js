@@ -1,4 +1,4 @@
-// The entire surface the renderer can reach. Twenty-three calls, every argument
+// The entire surface the renderer can reach. Thirty-one calls, every argument
 // validated, nothing that takes a path or a filename.
 //
 // Each handler returns { ok: true, ... } or { ok: false, error } rather than
@@ -6,19 +6,25 @@
 // carries the main-process stack, which is detail a renderer has no business
 // seeing. Validation failures are reported as a plain message instead.
 
-const { ipcMain } = require('electron');
+const { app, ipcMain } = require('electron');
 const { ValidationError, TAG_COLORS, MINUTES_IN_DAY } = require('./schema');
+const { EDITION } = require('./edition');
 
 // `onRendererReady` is called each time the page asks for its initial state,
 // which is the first moment it can be relied on to be listening. The reminder
 // scheduler waits for it, so a reminder that came due while the app was closed
 // is not sent into a page that has not loaded yet.
-function register(store, { onRendererReady } = {}) {
+//
+// `timers` holds the Timer page's deadlines (timers.js). A page that loads arms
+// its running timers again, so the old set is forgotten first.
+function register(store, { onRendererReady, timers } = {}) {
   const handlers = {
     // Full state, for the renderer's cache on startup.
     'state:load': () => {
       if (onRendererReady) onRendererReady();
-      return { ...store.snapshot(), tagColors: TAG_COLORS, minutesInDay: MINUTES_IN_DAY };
+      if (timers) timers.clear();
+      return { ...store.snapshot(), tagColors: TAG_COLORS, minutesInDay: MINUTES_IN_DAY,
+               edition: EDITION, version: app.getVersion(), packaged: app.isPackaged };
     },
 
     'notes:create': () => ({ note: store.createNote(), ...store.snapshot() }),
@@ -50,6 +56,15 @@ function register(store, { onRendererReady } = {}) {
     'pages:create': (input) => ({ page: store.createPage(input), ...store.snapshot() }),
     'pages:update': (pageId, patch) => ({ page: store.updatePage(pageId, patch), ...store.snapshot() }),
     'pages:delete': (pageId) => ({ deleted: store.deletePage(pageId), ...store.snapshot() }),
+
+    'goals:set': (input) => ({ goal: store.setGoal(input), ...store.snapshot() }),
+
+    'daynotes:create': (input) => ({ daynote: store.createDayNote(input), ...store.snapshot() }),
+    'daynotes:update': (noteId, patch) => ({ daynote: store.updateDayNote(noteId, patch), ...store.snapshot() }),
+    'daynotes:delete': (noteId) => ({ deleted: store.deleteDayNote(noteId), ...store.snapshot() }),
+
+    'timers:arm': (timerId, input) => { timers.arm(timerId, input); return {}; },
+    'timers:disarm': (timerId) => { timers.disarm(timerId); return {}; },
 
     // Lets the renderer force a write, e.g. when a page is closed.
     'state:flush': async () => { await store.flush(); return {}; },

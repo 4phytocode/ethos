@@ -11,6 +11,7 @@ const path = require('path');
 
 const { Vault } = require('../src/main/vault');
 const { Store } = require('../src/main/store');
+const { Timers, MAX_TIMERS } = require('../src/main/timers');
 const { ValidationError, TAG_COLORS, SCHEMA_VERSION, MAX_DONE_DATES } = require('../src/main/schema');
 
 let passed = 0;
@@ -1085,6 +1086,150 @@ async function main() {
     assert.throws(() => store.setMood({ date: TODAY, feeling: 'note', text: '  ' }, NOW), ValidationError);
     assert.throws(() => store.setMood({ date: '2999-01-01', feeling: 'good' }, NOW), ValidationError);
     assert.throws(() => store.setMood({ date: TODAY, feeling: 'good', text: 'x'.repeat(281) }, NOW), ValidationError);
+  });
+
+  console.log('\ngoals, day notes and tables (v8)');
+
+  await test('goals: one per horizon, survive a restart, empty text clears', async (root) => {
+    const { store } = await freshStore(root);
+    store.setGoal({ horizon: 'week', text: 'Finish chapter 3' }, NOW);
+    store.setGoal({ horizon: 'year', text: 'Pass the exams' }, NOW);
+    store.setGoal({ horizon: 'week', done: true }, NOW + 1);
+    assert.strictEqual(store.goals.length, 2);
+    await store.flush();
+    let after = await reopen(root);
+    const week = after.goals.find(g => g.horizon === 'week');
+    assert.strictEqual(week.text, 'Finish chapter 3');
+    assert.strictEqual(week.done, true);
+    // A new goal for the horizon starts again, not done.
+    after.setGoal({ horizon: 'week', text: 'Chapter 4' }, NOW + 2);
+    assert.strictEqual(after.goals.find(g => g.horizon === 'week').done, false);
+    assert.strictEqual(after.setGoal({ horizon: 'year', text: '  ' }, NOW + 3), null);
+    assert.strictEqual(after.goals.length, 1);
+    assert.throws(() => after.setGoal({ horizon: 'decade', text: 'x' }), ValidationError);
+    assert.throws(() => after.setGoal({ horizon: 'month', done: true }), ValidationError);
+    assert.throws(() => after.setGoal({ horizon: 'week', text: 'x'.repeat(201) }), ValidationError);
+  });
+
+  await test('day notes: sections and subjects, sorted by date, survive a restart', async (root) => {
+    const { store } = await freshStore(root);
+    const b = store.createDayNote({ date: '2026-03-12', section: 'Studies', subjects: ['Maths', 'maths', ' Physics '] }, NOW);
+    store.createDayNote({ date: '2026-03-10', section: '', text: 'Dentist' }, NOW);
+    assert.deepStrictEqual(b.subjects, ['Maths', 'Physics'], 'trimmed, case-insensitive de-dup');
+    assert.deepStrictEqual(store.daynotes.map(d => d.date), ['2026-03-10', '2026-03-12']);
+    assert.strictEqual(store.daynotes[0].section, 'General');
+    store.updateDayNote(b.id, { done: true, date: '2026-03-01' }, NOW);
+    await store.flush();
+    const after = await reopen(root);
+    assert.strictEqual(after.daynotes[0].id, b.id);
+    assert.strictEqual(after.daynotes[0].done, true);
+    assert.throws(() => after.createDayNote({ date: '2026-02-30' }), ValidationError);
+    assert.throws(() => after.createDayNote({ date: '2026-03-01', subjects: Array(21).fill('a').map((x, i) => x + i) }), ValidationError);
+    assert.throws(() => after.updateDayNote(b.id, {}), ValidationError);
+    assert.strictEqual(after.deleteDayNote(b.id), true);
+  });
+
+  await test('page tables round-trip; stale cells are dropped, bad structure refused', async (root) => {
+    const { store } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    const table = {
+      id: 'tab1', title: 'Revision',
+      columns: [
+        { id: 'c1', name: 'Topic', type: 'text' },
+        { id: 'c2', name: 'Done', type: 'progress' },
+        { id: 'c3', name: 'State', type: 'select', options: ['Todo', 'Done'] },
+        { id: 'c4', name: 'Ok', type: 'check' },
+      ],
+      rows: [{ id: 'r1', cells: { c1: 'Algebra', c2: 140, c3: 'Nope', c4: true, zz: 1 } }],
+    };
+    store.updatePage(page.id, { tables: [table], content: '{{table:tab1}}' }, NOW + 1);
+    const cells = store.pages[0].tables[0].rows[0].cells;
+    assert.deepStrictEqual(cells, { c1: 'Algebra', c2: 100, c4: true }, 'clamped, unknown option and column dropped');
+    const before = store.pages[0].updatedAt;
+    store.updatePage(page.id, { pinned: true }, NOW + 5);
+    assert.strictEqual(store.pages[0].updatedAt, before, 'pinning is not an edit');
+    await store.flush();
+    const after = await reopen(root);
+    assert.strictEqual(after.pages[0].tables[0].title, 'Revision');
+    assert.strictEqual(after.pages[0].pinned, true);
+    // The snapshot is a copy all the way down.
+    after.snapshot().pages[0].tables[0].rows[0].cells.c1 = 'hacked';
+    assert.strictEqual(after.pages[0].tables[0].rows[0].cells.c1, 'Algebra');
+    assert.throws(() => after.updatePage(page.id, { tables: [{ ...table, columns: [] }] }), ValidationError);
+    assert.throws(() => after.updatePage(page.id, { tables: [{ ...table, columns: [{ id: 'c1', type: 'formula' }] }] }), ValidationError);
+    assert.throws(() => after.updatePage(page.id, { tables: [table, table] }), ValidationError);
+    assert.throws(() => after.updatePage(page.id, { tables: [{ ...table, id: '../x' }] }), ValidationError);
+  });
+
+  await test('a v7 vault opens at v8 with no goals and plain pages', async (root) => {
+    const { store, vault } = await freshStore(root);
+    store.createPage({}, NOW);
+    await store.flush();
+    await fs.writeFile(vault.metaFile, JSON.stringify({ schemaVersion: 7 }), 'utf8');
+    const after = await reopen(root);
+    assert.deepStrictEqual(after.goals, []);
+    assert.deepStrictEqual(after.daynotes, []);
+    assert.deepStrictEqual(after.pages[0].tables, []);
+    assert.strictEqual(after.pages[0].pinned, false);
+    const meta = JSON.parse(await fs.readFile(vault.metaFile, 'utf8'));
+    assert.strictEqual(meta.schemaVersion, 8);
+  });
+
+  console.log('\ntimers');
+
+  // Each test stops its Timers, so no timeout outlives it.
+  const withTimers = async (fn) => {
+    const rung = [];
+    const timers = new Timers({ ring: (t) => rung.push(t), now: () => NOW });
+    try { await fn(timers, rung); } finally { timers.stop(); }
+  };
+
+  await test('a timer rings once, at its end, with its label and banner choice', () => withTimers((timers, rung) => {
+    timers.arm('tea', { endsAt: NOW + 5000, label: 'Tea', notify: true }, NOW);
+    assert.strictEqual(timers.tick(NOW + 4999).length, 0, 'not yet');
+    assert.strictEqual(timers.tick(NOW + 5000).length, 1);
+    assert.deepStrictEqual(rung, [{ id: 'tea', label: 'Tea', notify: true }]);
+    assert.strictEqual(timers.tick(NOW + 9000).length, 0, 'never twice');
+    assert.strictEqual(timers.hasArmed(), false);
+  }));
+
+  await test('arming again replaces a timer; disarm and clear forget it', () => withTimers((timers, rung) => {
+    timers.arm('a', { endsAt: NOW + 1000, label: '', notify: false }, NOW);
+    timers.arm('a', { endsAt: NOW + 8000, label: '', notify: false }, NOW);
+    assert.strictEqual(timers.tick(NOW + 2000).length, 0, 'the later end wins');
+    timers.disarm('a');
+    timers.arm('b', { endsAt: NOW + 1000, label: '', notify: false }, NOW);
+    timers.clear();
+    assert.strictEqual(timers.tick(NOW + 10000).length, 0);
+    assert.strictEqual(rung.length, 0);
+  }));
+
+  await test('bad timer input is rejected', () => withTimers((timers) => {
+    const ok = { endsAt: NOW + 1000, label: 'x', notify: true };
+    assert.throws(() => timers.arm('Bad Id', ok, NOW), ValidationError);
+    assert.throws(() => timers.arm('a'.repeat(33), ok, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', null, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, endsAt: 'soon' }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, endsAt: NOW + 101 * 3600 * 1000 }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, label: 'x'.repeat(41) }, NOW), ValidationError);
+    assert.throws(() => timers.arm('a', { ...ok, notify: 'yes' }, NOW), ValidationError);
+    assert.throws(() => timers.disarm(42), ValidationError);
+    for (let i = 0; i < MAX_TIMERS; i += 1) timers.arm('t' + i, ok, NOW);
+    assert.throws(() => timers.arm('onemore', ok, NOW), ValidationError);
+    timers.arm('t0', ok, NOW);   // re-arming one already held is still fine
+  }));
+
+  await test('a ring that throws is not rung again', async () => {
+    let calls = 0;
+    const timers = new Timers({ ring: () => { calls += 1; throw new Error('page gone'); }, now: () => NOW });
+    const quiet = console.error;
+    console.error = () => {};
+    try {
+      timers.arm('x', { endsAt: NOW, label: '', notify: false }, NOW);
+      timers.tick(NOW);
+      timers.tick(NOW + 60000);
+    } finally { console.error = quiet; timers.stop(); }
+    assert.strictEqual(calls, 1);
   });
 
   console.log('\n' + passed + ' passed, ' + failures.length + ' failed');

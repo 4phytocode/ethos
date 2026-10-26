@@ -21,7 +21,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const {
-  parseNote, parseTag, parseEvent, parseTodo, parseHabit, parseMood, parseFolder, parsePage,
+  parseNote, parseTag, parseEvent, parseTodo, parseHabit, parseMood, parseFolder, parsePage, parseGoal, parseDayNote,
   migrate, SCHEMA_VERSION,
 } = require('./schema');
 
@@ -36,6 +36,8 @@ class Vault {
     this.habitsFile = path.join(root, 'habits.json');
     this.foldersFile = path.join(root, 'folders.json');
     this.moodsFile = path.join(root, 'moods.json');
+    this.goalsFile = path.join(root, 'goals.json');
+    this.dayNotesFile = path.join(root, 'daynotes.json');
     this.pagesDir = path.join(root, 'pages');
     this.tmpDir = path.join(root, '.tmp');
   }
@@ -108,6 +110,8 @@ class Vault {
     const habits = await this.#loadList(this.habitsFile, 'habits', parseHabit);
     const folders = await this.#loadList(this.foldersFile, 'folders', parseFolder);
     const moods = await this.#loadList(this.moodsFile, 'moods', parseMood);
+    const goals = await this.#loadList(this.goalsFile, 'goals', parseGoal);
+    const daynotes = await this.#loadList(this.dayNotesFile, 'daynotes', parseDayNote);
     const pages = await this.#loadDocs(this.pagesDir, parsePage);
 
     // A vault with no meta.json is either brand new or was written before the
@@ -116,10 +120,11 @@ class Vault {
     // so anything with data in it is treated as version 1 — the earliest
     // version that could have produced it.
     const hasData = notes.length > 0 || tags.length > 0 || events.length > 0 ||
-      todos.length > 0 || habits.length > 0 || folders.length > 0 || pages.length > 0 || moods.length > 0;
+      todos.length > 0 || habits.length > 0 || folders.length > 0 || pages.length > 0 || moods.length > 0 ||
+      goals.length > 0 || daynotes.length > 0;
     const from = storedVersion !== null ? storedVersion : (hasData ? 1 : SCHEMA_VERSION);
 
-    const state = migrate({ schemaVersion: from, notes, tags, events, todos, habits, folders, pages, moods });
+    const state = migrate({ schemaVersion: from, notes, tags, events, todos, habits, folders, pages, moods, goals, daynotes });
 
     // Always leave a version on disk, including for a vault we just created.
     // Without this a fresh vault carries no marker at all and the next build
@@ -138,6 +143,8 @@ class Vault {
       folders: state.folders,
       pages: state.pages,
       moods: state.moods,
+      goals: state.goals,
+      daynotes: state.daynotes.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt)),
     };
   }
 
@@ -270,6 +277,14 @@ class Vault {
 
   async saveMoods(moods) {
     await this.#writeAtomic(this.moodsFile, JSON.stringify({ moods }, null, 2));
+  }
+
+  async saveGoals(goals) {
+    await this.#writeAtomic(this.goalsFile, JSON.stringify({ goals }, null, 2));
+  }
+
+  async saveDayNotes(daynotes) {
+    await this.#writeAtomic(this.dayNotesFile, JSON.stringify({ daynotes }, null, 2));
   }
 
   async saveEvents(events) {

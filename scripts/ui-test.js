@@ -16,9 +16,13 @@ const path = require('path');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ethos-ui-'));
 app.setPath('userData', tmp);
+// The main checks run as the full edition, so the Mood log and Blockers are
+// there to test. The edition section switches to the demo on the page.
+process.env.ETHOS_EDITION = 'full';
 require('../src/main/index.js');
 
-const NUDGE_WAIT_MS = 11500;   // NUDGE_MS (10s) plus slack
+const NUDGE_WAIT_MS = 11500;   // the test nudge delay (10s) plus slack
+const TEST_NUDGE_MS = 10000;   // set through ethos.test.nudgeMs; the product default is 30s
 const results = [];
 const errors = [];
 const wait = (ms) => new Promise(r => setTimeout(r, ms));
@@ -36,7 +40,7 @@ async function run() {
     if (e.level === 'error') errors.push(e.message);
   });
   if (win.webContents.isLoading()) await new Promise(r => win.webContents.once('did-finish-load', r));
-  await wait(3500); // intro animation + state load
+  await wait(4200); // intro animation (3.65s) + state load
   const js = (code) => win.webContents.executeJavaScript(code);
   const shot = async (name) => fs.writeFileSync(path.join(tmp, name), (await win.webContents.capturePage()).toPNG());
   const nudgeShown = () => js(`(() => { const n = document.getElementById('jp-nudge'); return !n.hidden && n.offsetParent !== null; })()`);
@@ -53,7 +57,7 @@ async function run() {
   check('mood and to-do cards share both edges', r.mood.l === r.todo.l && r.mood.r === r.todo.r, JSON.stringify(r));
   check('habits segment ends where the to-do card ends', r.habits.r === r.todo.r, JSON.stringify(r));
   check('fixed habit bar is gone', await js(`!document.querySelector('.habit-bar')`));
-  check('backdrop is on (gradient) by default', await js(`document.body.dataset.bg === 'gradient'`));
+  check('backdrop is the desktop pattern by default', await js(`document.body.dataset.bg === 'pattern' && document.body.dataset.bgPattern === 'teal'`));
   await shot('home.png');
   await js(`document.getElementById('sb-hide').click()`);
   await wait(700);
@@ -77,6 +81,7 @@ async function run() {
   check('log shows today first', rows[0] && rows[0].startsWith('Today') && rows[0].includes('Slept well.'), JSON.stringify(rows));
   check('a missed day reads "Not logged"', rows[1] && rows[1].includes('Not logged'), JSON.stringify(rows));
 
+  await js(`localStorage.setItem('ethos.test.nudgeMs', '${TEST_NUDGE_MS}')`);
   console.log('\njournal nudge (waits ~' + Math.round(NUDGE_WAIT_MS / 1000) + 's per case)');
   await js(`document.getElementById('new-page-btn').click()`);
   await wait(600);
@@ -235,10 +240,161 @@ async function run() {
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Beta').click()`);
   await until(`document.getElementById('nt-title').value === 'Beta'`);
   await js(`document.getElementById('nt-delete').click()`);
+  check('deleting a note asks first', await until(`!!document.querySelector('.dlg')`));
+  await js(`document.querySelector('.dlg .dlg-buttons button:not(.primary):not(.danger)').click()`);
+  check('cancel keeps the note', await until(`!document.querySelector('.dlg') && document.getElementById('nt-title').value === 'Beta'`));
+  await js(`document.getElementById('nt-delete').click()`);
+  await until(`!!document.querySelector('.dlg')`);
+  await js(`document.querySelector('.dlg .danger').click()`);
   await until(`![...document.querySelectorAll('#sb-tree .sb-row-label')].some(n => n.textContent === 'Beta')`);
   await js(`[...document.querySelectorAll('#sb-tree .sb-row-main')].find(b => b.textContent === 'Alpha').click()`);
   check('deleting a note removes the links to it',
     await until(`document.getElementById('nt-title').value === 'Alpha' && !document.querySelector('#nt-links-out .nt-link-open')`));
+
+  console.log('\nedition');
+  check('the full edition shows the Mood log', await js(`document.body.dataset.edition === 'full' && !!document.querySelector('[data-view="mood-page"]').offsetParent`));
+  await js(`document.body.dataset.edition = 'demo'`);
+  check('the demo hides the Mood log button', await js(`getComputedStyle(document.querySelector('[data-view="mood-page"]')).display === 'none'`));
+  check('the demo hides the Blockers placeholder', await js(`getComputedStyle(document.querySelector('.td-blockers')).display === 'none'`));
+  check('the demo hides the homepage mood card', await js(`getComputedStyle(document.getElementById('mood-card')).display === 'none'`));
+  // A click on a hidden button still runs its handler, so this is the real path.
+  await js(`document.querySelector('[data-view="todo-page"]').click()`);
+  await until(`document.body.dataset.view === 'todo-page'`);
+  await js(`document.querySelector('[data-view="mood-page"]').click()`);
+  check('going to the Mood log in the demo lands on Home', await until(`document.body.dataset.view === 'home'`));
+  await js(`document.body.dataset.edition = 'full'`);
+  check('the edition can be put back to full', await js(`document.body.dataset.edition === 'full'`));
+
+  console.log('\nsound');
+  await js(`document.querySelector('[data-view="settings-page"]').click()`);
+  await until(`document.body.dataset.view === 'settings-page'`);
+  check('the journal and notes editors take typing sounds',
+    await js(`document.getElementById('jp-textarea').hasAttribute('data-typing-sound') && document.getElementById('nt-body').hasAttribute('data-typing-sound')`));
+  check('typing sounds are off by default', await js(`!(JSON.parse(localStorage.getItem('ethos.sound') || '{}').typing)`));
+  await js(`[...document.querySelectorAll('#set-sound-typing button')].find(b => b.textContent === 'On').click()`);
+  check('turning typing sounds on is kept', await until(`JSON.parse(localStorage.getItem('ethos.sound')).typing === true`));
+  // A key in an editor with sounds on builds the audio graph; any failure there
+  // lands in the console-error check at the end.
+  await js(`(() => { const t = document.getElementById('jp-textarea'); t.focus(); t.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true })); })()`);
+  await wait(120);
+  await js(`[...document.querySelectorAll('#set-sound-typing button')].find(b => b.textContent === 'Off').click()`);
+  check('turning typing sounds off is kept', await until(`JSON.parse(localStorage.getItem('ethos.sound')).typing === false`));
+  check('the volume slider starts at the default', await js(`document.getElementById('set-sound-volume').value === '50'`));
+
+  console.log('\ntimer');
+  const card = (sel) => `document.querySelector('#tm-list .tm-card')${sel ? '.querySelector(' + JSON.stringify(sel) + ')' : ''}`;
+  await js(`document.querySelector('[data-view="timer-page"]').click()`);
+  check('the Timer page opens from the sidebar', await until(`document.body.dataset.view === 'timer-page'`));
+  check('it has the window title bar', await js(`document.querySelector('#timer-page .win-title-text').textContent === 'TIMER.EXE'`));
+  check('it starts with no timers', await js(`!document.getElementById('tm-empty').hidden && !document.querySelector('#tm-list li')`));
+  // A zero length is refused with a message, not added.
+  await js(`(() => { for (const id of ['tm-h', 'tm-m', 'tm-s']) document.getElementById(id).value = '0'; document.getElementById('tm-submit').click(); })()`);
+  check('a timer with no length is refused', await js(`document.getElementById('tm-error').textContent !== '' && !document.querySelector('#tm-list li')`));
+  // A preset fills the length.
+  await js(`document.querySelector('.tm-preset[data-secs="1500"]').click()`);
+  check('a preset fills the length', await js(`document.getElementById('tm-m').value === '25' && document.getElementById('tm-h').value === '0'`));
+  // A 2 second timer, alarm off (the test should be quiet), banner off.
+  await js(`(() => {
+    document.getElementById('tm-name').value = 'Tea';
+    document.getElementById('tm-m').value = '0';
+    document.getElementById('tm-s').value = '2';
+    document.getElementById('tm-alarm').click();
+    document.getElementById('tm-notify').click();
+    document.getElementById('tm-submit').click();
+  })()`);
+  check('the timer is added with its name and length', await js(`${card('.win-title-text')}.textContent === 'Tea' && ${card('.tm-time')}.textContent === '00:02'`));
+  check('it is kept on this computer', await js(`(() => { const t = JSON.parse(localStorage.getItem('ethos.timers')).timers[0]; return t.label === 'Tea' && t.ms === 2000 && t.alarm === false && t.notify === false; })()`));
+  await js(`${card('.tm-go')}.click()`);
+  check('starting it shows it running, with a badge in the sidebar', await until(`${card()}.classList.contains('tm-running') && !document.getElementById('sb-timer-badge').hidden`));
+  check('the status row counts it', await js(`document.querySelector('#timer-page .view-status').textContent === '1 running'`));
+  check('main rings it at the end', await until(`${card()}.classList.contains('tm-done')`, 4000));
+  check("a Time's up toast appears", await js(`[...document.querySelectorAll('.ethos-notif-title')].some(n => n.textContent === "Time's up")`));
+  check('the badge goes when nothing is running', await js(`document.getElementById('sb-timer-badge').hidden`));
+  await js(`${card('.tm-go')}.click()`);
+  check('dismissing it puts it back to its full length', await until(`${card()}.classList.contains('tm-idle') && ${card('.tm-time')}.textContent === '00:02'`));
+  // Pause holds the time; it does not ring while paused.
+  await js(`${card('.tm-go')}.click()`);
+  await wait(400);
+  await js(`${card('.tm-go')}.click()`);
+  check('pausing holds it', await until(`${card()}.classList.contains('tm-paused')`));
+  await wait(2200);
+  check('a paused timer does not ring', await js(`${card()}.classList.contains('tm-paused')`));
+  // Edit: a new length, back to idle.
+  await js(`${card('.tm-edit')}.click()`);
+  check('edit fills the form', await js(`document.getElementById('tm-name').value === 'Tea' && document.getElementById('tm-submit').textContent === 'Save'`));
+  await js(`(() => { document.getElementById('tm-m').value = '3'; document.getElementById('tm-s').value = '0'; document.getElementById('tm-submit').click(); })()`);
+  check('saving changes the length and resets it', await js(`${card()}.classList.contains('tm-idle') && ${card('.tm-time')}.textContent === '03:00'`));
+  await js(`document.querySelectorAll('.ethos-notif-close').forEach(b => b.click())`);
+  await shot('timer.png');
+  // With its alarm on, a ringing timer offers Stop, and the toast offers Stop alarm.
+  // (A second of quiet beeps.)
+  await js(`(() => { ${card('.tm-edit')}.click(); document.getElementById('tm-m').value = '0'; document.getElementById('tm-s').value = '1';
+    const a = document.getElementById('tm-alarm'); if (a.getAttribute('aria-pressed') !== 'true') a.click();
+    document.getElementById('tm-submit').click(); ${card('.tm-go')}.click(); })()`);
+  check('a ringing alarm offers Stop', await until(`${card()}.classList.contains('tm-ringing') && ${card('.tm-go')}.textContent === 'Stop'`, 4000));
+  check('its toast offers Stop alarm and stays up', await js(`[...document.querySelectorAll('.ethos-notif-action')].some(b => b.textContent === 'Stop alarm')`));
+  await js(`${card('.tm-go')}.click()`);
+  check('Stop silences it and clears its toast', await until(`${card()}.classList.contains('tm-idle') && ![...document.querySelectorAll('.ethos-notif-action')].some(b => b.textContent === 'Stop alarm')`));
+  await js(`${card('.win-btn')}.click()`);
+  check('deleting it empties the list', await js(`!document.querySelector('#tm-list li') && !document.getElementById('tm-empty').hidden`));
+
+  console.log('\ngoals');
+  await js(`document.querySelector('[data-view="home"]').click()`);
+  await until(`document.body.dataset.view === 'home'`);
+  check('three goal slots are on the homepage', await js(`document.querySelectorAll('#goals-list .goal').length === 3 && document.querySelectorAll('#goals-list .goal-add').length === 3`));
+  await js(`document.querySelector('.goal[data-horizon="week"] .goal-add').click()`);
+  await until(`!!document.querySelector('.goal-input')`);
+  await js(`(() => { const i = document.querySelector('.goal-input'); i.value = 'Finish chapter 3'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); })()`);
+  check('a week goal is set and shown', await until(`document.querySelector('.goal[data-horizon="week"] .goal-text')?.textContent === 'Finish chapter 3'`));
+  check('it shows how many days are left', await js(`/\\d+ days left|last day/.test(document.querySelector('.goal[data-horizon="week"] .goal-left').textContent)`));
+  await js(`document.querySelector('.goal[data-horizon="week"] .tick').click()`);
+  check('ticking marks it reached', await until(`document.querySelector('.goal[data-horizon="week"]').classList.contains('done') && document.getElementById('goals-stat').textContent === '1 of 1 reached'`));
+  await wait(800);
+  await shot('goals.png');
+
+  console.log('\nday notes');
+  await js(`document.querySelector('[data-view="schedule-page"]').click()`);
+  await until(`document.body.dataset.view === 'schedule-page'`);
+  await js(`document.getElementById('sc-note-add').click()`);
+  check('"+ Day note" opens the editor', await until(`!!document.querySelector('.dn-win')`));
+  await js(`(() => { const s = document.querySelector('.dn-subject-input');
+    for (const v of ['Maths', 'Physics']) { s.value = v; s.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } })()`);
+  check('subjects are added as chips', await until(`document.querySelectorAll('.dn-subjects .dn-subject').length === 2`));
+  await js(`document.querySelector('.dn-foot .primary').click()`);
+  check('the note shows on the calendar', await until(`[...document.querySelectorAll('.dn-chip')].some(c => c.textContent === 'Studies: Maths, Physics')`));
+  check('and in the rail, with the plan ahead', await until(`document.querySelectorAll('#dn-rail-day .dn-item').length === 1 && document.querySelectorAll('#dn-rail-plan .dn-item').length === 1`));
+  await wait(800);
+  await shot('day-notes.png');
+  await js(`document.getElementById('sc-note-add').click()`);
+  await until(`!!document.querySelector('.dn-win')`);
+  await js(`document.querySelector('.dn-win .win-btn').click()`);
+  check('an untouched new note is rubbed out', await until(`!document.querySelector('.dn-win') && document.querySelectorAll('#dn-rail-day .dn-item').length === 1`));
+
+  console.log('\nnote tables');
+  check('a note opens with a table button', await newNote('Revision') && await js(`!!document.getElementById('nt-add-table')`));
+  await js(`(() => { const b = document.getElementById('nt-body'); b.value = 'Intro\\n/tracker'; b.focus(); b.setSelectionRange(b.value.length, b.value.length);
+    b.dispatchEvent(new Event('input')); b.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('/tracker inserts a progress tracker', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 1 && document.querySelectorAll('#nt-blocks .nt-th').length === 4`));
+  await js(`(() => { const c = document.querySelector('.nt-td.nt-type-text input'); c.value = 'Algebra'; c.dispatchEvent(new Event('input'));
+    document.querySelector('.nt-td.nt-type-check .tick').click(); })()`);
+  check('ticking a row updates the summary and progress', await until(`document.querySelector('.nt-table-pct')?.textContent === '33%'`));
+  await wait(900);
+  const saved = await js(`import('./js/state.js').then(s => { const p = s.pages().find(p => p.title === 'Revision'); return p && { c: p.content, t: p.tables.length, cell: p.tables[0] && p.tables[0].rows[0].cells }; })`);
+  check('the table is saved in the page', saved && saved.t === 1 && /^Intro\n\{\{table:[a-z0-9]+\}\}$/.test(saved.c) && Object.values(saved.cell).includes('Algebra'), JSON.stringify(saved));
+  await shot('note-table.png');
+
+  console.log('\nnotes tools');
+  await js(`document.getElementById('nt-pin').click()`);
+  check('pinning lists the note under Pinned', await until(`[...document.querySelectorAll('#sb-tree .sb-sub')].some(n => n.textContent === 'Pinned')`));
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }))`);
+  check('Ctrl+P opens the switcher', await until(`!!document.querySelector('.qs-input')`));
+  await js(`(() => { const i = document.querySelector('.qs-input'); i.value = 'alph'; i.dispatchEvent(new Event('input'));
+    i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('Enter opens the match', await until(`!document.querySelector('.qs-input') && document.getElementById('nt-title').value === 'Alpha'`));
+  await js(`document.getElementById('nt-crumb').click()`);
+  await js(`(() => { const s = document.getElementById('nt-search'); s.value = 'algebra'; s.dispatchEvent(new Event('input')); })()`);
+  check('search finds text inside tables', await until(`[...document.querySelectorAll('#nt-recent .nt-card-title')].map(n => n.textContent).join() === 'Revision'`));
+  await js(`(() => { const s = document.getElementById('nt-search'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);
 
   console.log('\nconsole');
   check('no renderer errors', errors.length === 0, errors.join(' | '));
