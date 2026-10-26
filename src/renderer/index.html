@@ -551,7 +551,8 @@
       <section class="td-col" aria-labelledby="td-col-task">
         <div class="td-col-head">
           <h2 id="td-col-task">To do</h2>
-          <span class="td-col-hint">Drag to reorder &middot; double-click to rename</span>
+          <span class="td-col-hint">Drag to reorder &middot; right-click for more</span>
+          <button class="td-clear" id="td-clear" type="button" title="Delete finished items on this day">Clear done</button>
         </div>
         <ul class="td-list" id="td-list" data-kind="task"></ul>
       </section>
@@ -626,37 +627,51 @@
 
     <form class="group tm-form" id="tm-form" autocomplete="off" novalidate>
       <span class="group-label" id="tm-form-label">New timer</span>
-      <div class="tm-presets" role="group" aria-label="Quick lengths">
-        <button type="button" class="tm-preset" data-secs="60">1 min</button>
-        <button type="button" class="tm-preset" data-secs="300">5 min</button>
-        <button type="button" class="tm-preset" data-secs="600">10 min</button>
-        <button type="button" class="tm-preset" data-secs="900">15 min</button>
-        <button type="button" class="tm-preset" data-secs="1500">25 min</button>
-        <button type="button" class="tm-preset" data-secs="3600">1 hour</button>
-      </div>
       <div class="tm-fields">
-        <label class="tm-field tm-field-name"><span>Name</span>
-          <input id="tm-name" type="text" maxlength="40" placeholder="e.g. Tea"/></label>
-        <label class="tm-field"><span>Hours</span>
-          <input id="tm-h" type="number" min="0" max="99" step="1" value="0" inputmode="numeric"/></label>
-        <label class="tm-field"><span>Minutes</span>
-          <input id="tm-m" type="number" min="0" max="59" step="1" value="5" inputmode="numeric"/></label>
-        <label class="tm-field"><span>Seconds</span>
-          <input id="tm-s" type="number" min="0" max="59" step="1" value="0" inputmode="numeric"/></label>
-      </div>
-      <div class="tm-form-foot">
-        <button type="button" class="tm-toggle" id="tm-alarm" aria-pressed="true" title="Sound an alarm when time is up">
-          <span data-icon="volume" data-icon-size="16"></span><span>Alarm</span></button>
-        <button type="button" class="tm-toggle" id="tm-notify" aria-pressed="true" title="Show a Windows notification when time is up">
-          <span data-icon="notification" data-icon-size="16"></span><span>Notification</span></button>
-        <span class="tm-error" id="tm-error" role="alert"></span>
-        <button type="button" class="tm-cancel" id="tm-cancel" hidden>Cancel</button>
-        <button type="submit" class="tm-submit" id="tm-submit">Add timer</button>
+        <!-- The dial: drag round the ring (one lap is an hour), scroll to nudge,
+             or type in the middle. h/m/s stay as hidden fields the form reads. -->
+        <div class="tm-dial" id="tm-dial" title="Drag round the ring, scroll, or type a length">
+          <svg viewBox="0 0 220 220" aria-hidden="true">
+            <circle class="tm-dial-track" cx="110" cy="110" r="90"/>
+            <g class="tm-dial-ticks" id="tm-dial-ticks"></g>
+            <circle class="tm-dial-arc" id="tm-dial-arc" cx="110" cy="110" r="90" pathLength="100"/>
+            <circle class="tm-dial-knob" id="tm-dial-knob" cx="110" cy="20" r="11"/>
+          </svg>
+          <div class="tm-dial-center">
+            <input id="tm-text" class="tm-dial-text" type="text" spellcheck="false" maxlength="12"
+                   aria-label="Length, like 25, 1:30:00 or 1h 30m"/>
+            <span class="tm-dial-hint" id="tm-dial-hint">drag · scroll · type</span>
+          </div>
+        </div>
+        <div class="tm-side">
+          <label class="tm-field tm-field-name"><span>Name</span>
+            <input id="tm-name" type="text" maxlength="40" placeholder="e.g. Tea"/></label>
+          <input id="tm-h" type="hidden" value="0"/>
+          <input id="tm-m" type="hidden" value="5"/>
+          <input id="tm-s" type="hidden" value="0"/>
+          <div class="tm-presets" role="group" aria-label="Quick lengths">
+            <button type="button" class="tm-preset" data-secs="60">1 min</button>
+            <button type="button" class="tm-preset" data-secs="300">5 min</button>
+            <button type="button" class="tm-preset" data-secs="600">10 min</button>
+            <button type="button" class="tm-preset" data-secs="900">15 min</button>
+            <button type="button" class="tm-preset" data-secs="1500">25 min</button>
+            <button type="button" class="tm-preset" data-secs="3600">1 hour</button>
+          </div>
+          <div class="tm-form-foot">
+            <button type="button" class="tm-toggle" id="tm-alarm" aria-pressed="true" title="Sound an alarm when time is up">
+              <span data-icon="volume" data-icon-size="16"></span><span>Alarm</span></button>
+            <button type="button" class="tm-toggle" id="tm-notify" aria-pressed="true" title="Show a Windows notification when time is up">
+              <span data-icon="notification" data-icon-size="16"></span><span>Notification</span></button>
+            <span class="tm-error" id="tm-error" role="alert"></span>
+            <button type="button" class="tm-cancel" id="tm-cancel" hidden>Cancel</button>
+            <button type="submit" class="tm-submit" id="tm-submit">Add timer</button>
+          </div>
+        </div>
       </div>
     </form>
 
     <ul class="tm-list" id="tm-list" aria-label="Timers"></ul>
-    <p class="tm-empty" id="tm-empty">No timers yet. Pick a length above and add one.</p>
+    <p class="tm-empty" id="tm-empty">No timers yet. Spin the dial and add one.</p>
   </section>
 
   <!-- Settings -->

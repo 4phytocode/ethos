@@ -510,7 +510,12 @@ class Store {
     const today = localISO(now);
     const midnight = new Date(now);
     midnight.setHours(0, 0, 0, 0);
-    const pinnedStart = (t) => midnight.getTime() + t.startMinute * 60000;
+    // A task pinned to a time that had already passed when it was added starts
+    // when it was added, not in the past (bugs.md 9.1).
+    const pinnedStart = (t) => {
+      const at = midnight.getTime() + t.startMinute * 60000;
+      return t.createdAt > at + (t.minutes || 0) * 60000 ? t.createdAt : at;
+    };
     const setDue = (t, dueAt) => { if (dueAt !== t.dueAt) t.notified = false; t.dueAt = dueAt; };
 
     const mine = this.todos.filter(t => t.date === today && !t.done && t.kind === 'task');

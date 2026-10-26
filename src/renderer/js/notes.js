@@ -24,6 +24,7 @@ const MAX_TABLES = 20;
 let openPageId = null;
 let saveTimer = 0;
 let openFolders = loadOpen();
+let renameDraft = null;      // its typed value, kept across redraws
 let renaming = null;          // folder id whose name is being edited in the tree
 
 let tree, home, doc, fTitle, blocksEl, fMove, fTemp, fPin, fUpdated, fCrumb, homeList;
@@ -138,7 +139,7 @@ async function newFolder() {
     const folder = await state.createFolder({ name: 'New folder' });
     openFolders.add(folder.id);
     saveOpen();
-    renaming = folder.id;
+    renaming = folder.id; renameDraft = null;
     renderTree();
   } catch (err) {
     notify.error('Could not create the folder', err.message);
@@ -146,7 +147,7 @@ async function newFolder() {
 }
 
 async function renameFolder(id, name) {
-  renaming = null;
+  renaming = null; renameDraft = null;
   const folder = state.folder(id);
   if (!folder || !name.trim() || name.trim() === folder.name) { renderTree(); return; }
   try { await state.renameFolder(id, { name }); } catch (err) {
@@ -445,11 +446,11 @@ function folderRow(folder) {
 
   if (renaming === folder.id) {
     const input = el('input', 'sb-rename');
-    input.value = folder.name;
+    input.value = renameDraft !== null ? renameDraft : folder.name;
     input.maxLength = 60;
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') input.blur();
-      if (e.key === 'Escape') { renaming = null; renderTree(); }
+      if (e.key === 'Escape') { renaming = null; renameDraft = null; renderTree(); }
     });
     input.addEventListener('blur', () => { if (renaming === folder.id) renameFolder(folder.id, input.value); });
     row.append(icon('folder'), input);
@@ -468,7 +469,7 @@ function folderRow(folder) {
       wrap.classList.toggle('open');
       main.setAttribute('aria-expanded', String(wrap.classList.contains('open')));
     });
-    main.addEventListener('dblclick', () => { renaming = folder.id; renderTree(); });
+    main.addEventListener('dblclick', () => { renaming = folder.id; renameDraft = null; renderTree(); });
 
     const add = el('button', 'sb-row-tool');
     add.type = 'button';
@@ -487,8 +488,10 @@ function folderRow(folder) {
       e.stopPropagation();
       showCtx(e, [
         { label: 'New note here', onClick: () => newPage({ folderId: folder.id }) },
-        { label: 'Rename', onClick: () => { renaming = folder.id; renderTree(); } },
+        { label: 'Rename', onClick: () => { renaming = folder.id; renameDraft = null; renderTree(); } },
         { label: 'Delete folder (keeps notes)', onClick: () => deleteFolder(folder.id) },
+        { label: 'Expand all folders', onClick: () => setAllOpen(true) },
+        { label: 'Collapse all folders', onClick: () => setAllOpen(false) },
       ]);
     };
     more.addEventListener('click', menu);
@@ -512,8 +515,21 @@ function folderRow(folder) {
   return wrap;
 }
 
+function setAllOpen(open) {
+  openFolders.clear();
+  if (open) for (const f of state.folders()) openFolders.add(f.id);
+  saveOpen();
+  renderTree();
+}
+
 function renderTree() {
   if (!tree) return;
+  // Keep a half-typed folder name: the rename input survives unrelated redraws.
+  const live = tree.querySelector('.sb-rename');
+  if (live && renaming) {
+    renameDraft = live.value;
+    if (document.activeElement === live) return;   // its blur saves and redraws
+  }
   tree.replaceChildren();
   const pinned = state.pages().filter(p => p.pinned);
   if (pinned.length) {
@@ -901,7 +917,7 @@ export function initNotes() {
   const addTable = document.getElementById('nt-add-table');
   // mousedown would move focus off the text, and with it the caret we insert at.
   addTable.addEventListener('mousedown', (e) => e.preventDefault());
-  addTable.addEventListener('click', () => tableMenu(addTable));
+  addTable.addEventListener('click', (e) => { e.stopPropagation(); tableMenu(addTable); });
   const more = document.getElementById('nt-more');
   more.addEventListener('click', () => {
     const page = openPageId && state.page(openPageId);

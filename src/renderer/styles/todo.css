@@ -138,3 +138,9 @@
 @media (prefers-reduced-motion: reduce) {
   .tick, .tick svg, .td-item { transition-duration: 0.01ms; }
 }
+
+.td-clear { margin-left: auto; padding: 4px 10px; border: 1px solid var(--line); border-radius: var(--radius);
+            background: transparent; color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; }
+.td-clear:hover { color: var(--fg); border-color: var(--fg); }
+.td-item { cursor: grab; }
+.td-item:active { cursor: grabbing; }

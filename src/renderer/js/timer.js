@@ -7,6 +7,10 @@
 // The page only draws the countdown.
 //
 // A timer is idle, running (endsAt), paused (left, in ms) or done.
+//
+// Everything works by mouse: the form's length is a dial (drag round the ring,
+// one lap an hour; scroll to nudge; or type in the middle), and each timer is a
+// ring you click to start or pause and scroll, while idle, to lengthen or shorten.
 
 import { show, onEnter, current } from './views.js';
 import { notify } from './notifications.js';
@@ -260,8 +264,9 @@ function syncTicker() {
 function paintTime(card, t, now = Date.now()) {
   const left = remaining(t, now);
   card.querySelector('.tm-time').textContent = clock(left, t.ms);
-  const done = t.ms ? 100 - (left / t.ms) * 100 : 0;
-  card.querySelector('.tm-progress').style.setProperty('--p', done.toFixed(2) + '%');
+  // The ring empties as time runs out.
+  const frac = t.ms ? left / t.ms : 0;
+  card.querySelector('.tm-ring-arc').style.strokeDashoffset = (100 - frac * 100).toFixed(2);
 }
 
 function button(className, iconName, text, onClick, label) {
@@ -304,8 +309,33 @@ function card(t) {
   const body = document.createElement('div');
   body.className = 'tm-body';
 
-  const face = document.createElement('div');
+  const ring = document.createElement('div');
+  ring.className = 'tm-ring';
+  ring.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true">' +
+    '<circle class="tm-ring-track" cx="60" cy="60" r="52"/>' +
+    '<circle class="tm-ring-arc" cx="60" cy="60" r="52" pathLength="100"/></svg>';
+  // The middle of the ring is the main control: start, pause, resume, or stop.
+  const face = document.createElement('button');
+  face.type = 'button';
   face.className = 'tm-face';
+  face.title = t.status === 'running' ? 'Click to pause'
+    : t.status === 'done' ? 'Click to stop'
+    : 'Click to start' + (t.status === 'idle' ? ' · scroll to change the length' : '');
+  face.addEventListener('click', () => {
+    if (t.status === 'running') pause(t);
+    else if (t.status === 'done') reset(t);
+    else start(t);
+  });
+  if (t.status === 'idle') {
+    ring.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const step = e.shiftKey ? 10000 : 60000;
+      const next = t.ms + (e.deltaY < 0 ? step : -step);
+      if (next < 1000 || next > MAX_SECS * 1000) return;
+      t.ms = next;
+      changed();
+    }, { passive: false });
+  }
   const time = document.createElement('span');
   time.className = 'tm-time';
   face.appendChild(time);
@@ -313,12 +343,8 @@ function card(t) {
   state.className = 'tm-state';
   state.textContent = STATE_TEXT[t.status] + (t.status === 'idle' ? '' : ' · ' + lengthText(t.ms));
   face.appendChild(state);
-  body.appendChild(face);
-
-  const progress = document.createElement('div');
-  progress.className = 'progress tm-progress';
-  progress.appendChild(document.createElement('i'));
-  body.appendChild(progress);
+  ring.appendChild(face);
+  body.appendChild(ring);
 
   const controls = document.createElement('div');
   controls.className = 'tm-controls';
@@ -359,6 +385,127 @@ function fillLength(ms) {
   els.h.value = String(Math.floor(secs / 3600));
   els.m.value = String(Math.floor(secs / 60) % 60);
   els.s.value = String(secs % 60);
+  paintDial();
+}
+
+// ─── The dial ───
+
+function formSecs() {
+  const h = field(els.h, 99), m = field(els.m, 59), s = field(els.s, 59);
+  return [h, m, s].some(Number.isNaN) ? 0 : h * 3600 + m * 60 + s;
+}
+
+function setSecs(secs) {
+  fillLength(Math.max(0, Math.min(MAX_SECS, Math.round(secs))) * 1000);
+  els.error.textContent = '';
+}
+
+// The arc and knob show the minutes into the current hour; whole hours are
+// written under the time.
+function paintDial() {
+  if (!els.arc) return;
+  const secs = formSecs();
+  const lap = (secs % 3600) / 3600;
+  const full = secs > 0 && lap === 0;
+  els.arc.style.strokeDashoffset = String(100 - (full ? 100 : lap * 100));
+  const a = (full ? 1 : lap) * 2 * Math.PI;
+  els.knob.setAttribute('cx', (110 + 90 * Math.sin(a)).toFixed(2));
+  els.knob.setAttribute('cy', (110 - 90 * Math.cos(a)).toFixed(2));
+  if (document.activeElement !== els.text) els.text.value = clock(secs * 1000, secs * 1000);
+  const hours = Math.floor(secs / 3600);
+  els.hint.textContent = hours
+    ? hours + (hours === 1 ? ' hour' : ' hours') + ' + ' + Math.floor(secs % 3600 / 60) + ' min'
+    : 'drag · scroll · type';
+}
+
+// "25" is minutes; "4:30" is m:s; "1:30:00" is h:m:s; "1h 30m", "90s" and
+// "2h" read as written. NaN when it is none of those.
+function parseLength(text) {
+  const t = text.trim().toLowerCase();
+  if (/^\d+$/.test(t)) return Number(t) * 60;
+  if (/^\d+(:\d{1,2}){1,2}$/.test(t)) {
+    const parts = t.split(':').map(Number);
+    if (parts.slice(1).some(n => n > 59)) return NaN;
+    return parts.reduce((acc, n) => acc * 60 + n, 0);
+  }
+  const m = t.match(/^(?:(\d+)\s*h)?\s*(?:(\d+)\s*m(?:in)?)?\s*(?:(\d+)\s*s)?$/);
+  if (m && (m[1] || m[2] || m[3])) return (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0);
+  return NaN;
+}
+
+function commitText() {
+  const secs = parseLength(els.text.value);
+  if (Number.isNaN(secs) || secs > MAX_SECS) {
+    els.error.textContent = 'Try 25, 4:30, 1:30:00 or 1h 30m.';
+    paintDial();
+    return false;
+  }
+  setSecs(secs);
+  return true;
+}
+
+function initDial() {
+  const ticks = document.getElementById('tm-dial-ticks');
+  for (let i = 0; i < 60; i += 1) {
+    const a = i / 60 * 2 * Math.PI, big = i % 5 === 0;
+    const r1 = big ? 70 : 74, r2 = 78;
+    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+    l.setAttribute('x1', (110 + r1 * Math.sin(a)).toFixed(2));
+    l.setAttribute('y1', (110 - r1 * Math.cos(a)).toFixed(2));
+    l.setAttribute('x2', (110 + r2 * Math.sin(a)).toFixed(2));
+    l.setAttribute('y2', (110 - r2 * Math.cos(a)).toFixed(2));
+    if (big) l.classList.add('big');
+    ticks.appendChild(l);
+  }
+
+  // Dragging adds up the angle turned, so going round again adds an hour and
+  // turning back past the top takes it off. Snaps to the minute (Shift: 5 s).
+  const svg = els.dial.querySelector('svg');
+  let drag = null;
+  const angleAt = (e) => {
+    const r = svg.getBoundingClientRect();
+    const x = e.clientX - (r.left + r.width / 2), y = e.clientY - (r.top + r.height / 2);
+    return (Math.atan2(x, -y) / (2 * Math.PI) + 1) % 1;   // 0 at the top, clockwise
+  };
+  const move = (e) => {
+    if (!drag) return;
+    const a = angleAt(e);
+    let d = a - drag.last;
+    if (d > 0.5) d -= 1;
+    if (d < -0.5) d += 1;
+    drag.last = a;
+    drag.raw = Math.max(0, Math.min(MAX_SECS, drag.raw + d * 3600));
+    const snap = e.shiftKey ? 5 : 60;
+    setSecs(Math.round(drag.raw / snap) * snap);
+  };
+  svg.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    e.preventDefault();
+    const a = angleAt(e);
+    // Pressing on the ring jumps the knob there, within the current hour.
+    drag = { last: a, raw: Math.floor(formSecs() / 3600) * 3600 + a * 3600 };
+    try { svg.setPointerCapture(e.pointerId); } catch { /* moves still arrive */ }
+    els.dial.classList.add('dragging');
+    move(e);
+  });
+  svg.addEventListener('pointermove', move);
+  const end = () => { drag = null; els.dial.classList.remove('dragging'); };
+  svg.addEventListener('pointerup', end);
+  svg.addEventListener('pointercancel', end);
+
+  els.dial.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const step = e.shiftKey ? 10 : 60;
+    setSecs(formSecs() + (e.deltaY < 0 ? step : -step));
+  }, { passive: false });
+
+  els.text.addEventListener('focus', () => els.text.select());
+  els.text.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); if (commitText()) els.text.blur(); }
+    if (e.key === 'Escape') els.text.blur();
+  });
+  els.text.addEventListener('blur', () => { if (els.text.value.trim()) commitText(); else paintDial(); });
+  paintDial();
 }
 
 function openForm(t) {
@@ -381,6 +528,7 @@ function closeForm() {
   els.submit.textContent = 'Add timer';
   els.cancel.hidden = true;
   els.error.textContent = '';
+  paintDial();
 }
 
 // Whole numbers only; an empty box counts as 0.
@@ -393,6 +541,7 @@ function field(input, max) {
 
 function submit(e) {
   e.preventDefault();
+  if (document.activeElement === els.text && !commitText()) return;
   const h = field(els.h, 99), m = field(els.m, 59), s = field(els.s, 59);
   if ([h, m, s].some(Number.isNaN)) { els.error.textContent = 'Use whole numbers: up to 99 hours, 59 minutes, 59 seconds.'; return; }
   const secs = h * 3600 + m * 60 + s;
@@ -456,10 +605,13 @@ export function initTimer() {
     h: $('tm-h'), m: $('tm-m'), s: $('tm-s'),
     alarm: $('tm-alarm'), notify: $('tm-notify'),
     error: $('tm-error'), cancel: $('tm-cancel'), submit: $('tm-submit'),
+    dial: $('tm-dial'), arc: $('tm-dial-arc'), knob: $('tm-dial-knob'),
+    text: $('tm-text'), hint: $('tm-dial-hint'),
   };
   if (!els.list || !window.ethos || !window.ethos.timers) return;
 
   els.form.addEventListener('submit', submit);
+  initDial();
   els.cancel.addEventListener('click', closeForm);
   for (const btn of [els.alarm, els.notify]) {
     btn.addEventListener('click', () => setPressed(btn, !pressed(btn)));

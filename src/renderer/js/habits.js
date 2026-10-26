@@ -1,9 +1,8 @@
 // The habit tracker: a contribution grid over the last weeks, and today's
 // habits as tick boxes.
 //
-// A day in the grid is dark when every habit that existed on that day was done.
-// Partly done is a middle shade and nothing done is empty, which is the same
-// three-level language the journal streak uses, drawn with the same CSS.
+// A day in the grid is shaded by the share of habits done that day: the more
+// done, the whiter, and every habit done is full white.
 //
 // The grid is derived from the habits already in the cache. Nothing about it is
 // stored, so it cannot drift out of step with the ticks.
@@ -115,12 +114,20 @@ function startOf(h) {
 function dayTally(iso, habits) {
   const existing = habits.filter(h => iso >= startOf(h));
   const done = existing.filter(h => h.doneDates.includes(iso));
-  return { existing: existing.length, done: done.length };
+  return { existing: existing.length, done: done.length, doneHabits: done };
 }
 
+// The cell fill: one shade per share of habits done, like a contribution
+// graph. 6 of 6 is full white (the text colour), 5 of 6 almost, and so on.
 function levelOf({ existing, done }) {
   if (existing === 0 || done === 0) return 0;
   return done === existing ? 2 : 1;
+}
+
+function cellFill(tally) {
+  if (tally.existing === 0 || tally.done === 0) return '';
+  const pct = Math.round(20 + 80 * tally.done / tally.existing);
+  return 'color-mix(in srgb, var(--fg) ' + pct + '%, var(--hover))';
 }
 
 // Consecutive days, ending today or yesterday, on which every habit was done.
@@ -168,6 +175,8 @@ function renderList(habits) {
 
     li.appendChild(tickButton(done, (done ? 'Mark not done: ' : 'Mark done: ') + h.name,
       (next) => toggle(h.id, next)));
+    // The whole row ticks, not just the box.
+    li.addEventListener('click', (e) => { if (!e.target.closest('button')) toggle(h.id, !done); });
 
     const name = document.createElement('span');
     name.className = 'hb-item-name';
@@ -228,8 +237,11 @@ function renderGrid(habits) {
       } else {
         const tally = dayTally(isoOf(day), habits);
         cell.dataset.level = String(levelOf(tally));
+        const fill = cellFill(tally);
+        if (fill) cell.style.background = fill;
         cell.title = longDate.format(day) + ' — ' +
-          (tally.existing === 0 ? 'no habits yet' : tally.done + ' of ' + tally.existing + ' done');
+          (tally.existing === 0 ? 'no habits yet' : tally.done + ' of ' + tally.existing + ' done' +
+            (tally.done ? ': ' + tally.doneHabits.map(h => h.name).join(', ') : ''));
       }
       col.appendChild(cell);
     }
@@ -254,6 +266,7 @@ function renderHome(habits) {
     const done = h.doneDates.includes(today);
     const li = document.createElement('li');
     li.className = 'home-habit' + (done ? ' done' : '');
+    li.addEventListener('click', (e) => { if (!e.target.closest('button')) toggle(h.id, !done); });
     li.appendChild(tickButton(done, (done ? 'Mark not done: ' : 'Mark done: ') + h.name,
       (next) => toggle(h.id, next)));
     const name = document.createElement('span');

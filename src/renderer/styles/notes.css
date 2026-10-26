@@ -35,7 +35,7 @@
 .nt-move { height: 26px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
            color: var(--fg); font-family: inherit; font-size: 12px; outline: none; }
 body.dark .nt-move { color-scheme: dark; }
-.nt-chip { height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent;
+.nt-chip { display: inline-flex; align-items: center; justify-content: center; line-height: 1; height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent;
            color: var(--muted); font-family: inherit; font-size: 12px; cursor: pointer; transition: border-color 0.15s, color 0.15s; }
 .nt-chip:hover { border-color: var(--fg); color: var(--fg); }
 .nt-chip[aria-pressed="true"] { border-style: dashed; color: var(--fg); }

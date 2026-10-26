@@ -182,6 +182,10 @@ function syncDisplayBtn() {
 function visibleNotes() {
   let list = state.notes();
 
+  // Drop filters for tags that no longer exist, or the list would match nothing
+  // with no pill left to turn the filter off.
+  const live = new Set(state.tags().map(t => t.id));
+  for (const id of activeTagIds) if (!live.has(id)) activeTagIds.delete(id);
   if (activeTagIds.size) {
     list = list.filter(n => n.tagIds.some(id => activeTagIds.has(id)));
   }
@@ -199,6 +203,12 @@ function visibleNotes() {
 
 function renderList() {
   if (!els) return;
+  // A rename in progress would be wiped by the rebuild; redraw once it ends.
+  const active = document.activeElement;
+  if (active && active.classList.contains('rename-input') && els.grid.contains(active)) {
+    active.addEventListener('blur', () => setTimeout(renderList), { once: true });
+    return;
+  }
 
   els.calNav.hidden = mode !== 'calendar';
   els.grid.className = 'pages-grid' + (display === 'bullets' ? ' as-bullets' : '');

@@ -13,7 +13,7 @@
 // put it on.
 
 import * as state from './state.js';
-import { show } from './views.js';
+import { show, showCtx } from './views.js';
 import { notify } from './notifications.js';
 import { parseEntry, formatEntry } from './todo-parse.js';
 
@@ -151,6 +151,7 @@ export function initTodo() {
   els.prev.addEventListener('click', () => goTo(shiftISO(shownDate, -1)));
   els.next.addEventListener('click', () => goTo(shiftISO(shownDate, 1)));
   els.today.addEventListener('click', () => goTo(todayISO()));
+  document.getElementById('td-clear')?.addEventListener('click', clearDone);
   els.date.addEventListener('change', () => {
     // An empty or half-typed date must not blank the page.
     if (/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(els.date.value)) goTo(els.date.value);
@@ -269,6 +270,47 @@ async function remove(id) {
     if (t) notify.info('Deleted', t.title);
   } catch (err) {
     notify.error('Could not delete that', err.message);
+  }
+}
+
+// Right-click on a row: the mouse route to everything the row can do.
+function itemMenu(t) {
+  const items = [
+    { label: t.done ? 'Mark not done' : 'Mark done', onClick: () => toggle(t.id, !t.done) },
+    { label: 'Rename', onClick: () => {
+      const title = document.querySelector('[data-todo-id="' + t.id + '"] .td-item-title');
+      if (title) inlineEdit(title, t.title, 'Task', (v) => saveTitle(t, v));
+    } },
+    { label: 'Move to tomorrow', onClick: () => moveDay(t, 1) },
+  ];
+  if (t.date > todayISO()) items.push({ label: 'Move to today', onClick: () => moveDay(t, 0) });
+  items.push({ label: t.kind === 'task' ? 'Make it a reminder' : 'Make it a task',
+    onClick: () => patch(t, { kind: t.kind === 'task' ? 'remember' : 'task' }) });
+  items.push({ label: 'Delete', onClick: () => remove(t.id) });
+  return items;
+}
+
+async function patch(t, fields) {
+  try { await state.updateTodo(t.id, fields); }
+  catch (err) { notify.error('Could not update that', err.message); }
+}
+
+// delta 1: the day after the task's day; 0: today.
+async function moveDay(t, delta) {
+  const date = delta === 0 ? todayISO() : shiftISO(t.date, delta);
+  await patch(t, { date });
+  notify.info('Moved', t.title);
+}
+
+// Deletes every finished item on the shown day.
+async function clearDone() {
+  const done = state.todosOn(shownDate).filter(t => t.done);
+  if (!done.length) { notify.info('Nothing to clear', 'No finished items on this day.'); return; }
+  try {
+    for (const t of done) await state.removeTodo(t.id);
+    notify.info('Cleared', done.length + (done.length === 1 ? ' finished item' : ' finished items'));
+  } catch (err) {
+    notify.error('Could not clear finished items', err.message);
   }
 }
 
@@ -497,6 +539,7 @@ function renderItem(t) {
   tools.className = 'td-item-tools';
   tools.appendChild(iconButton('Delete', 'M18 6L6 18M6 6l12 12', () => remove(t.id)));
   row.appendChild(tools);
+  row.addEventListener('contextmenu', (e) => { e.preventDefault(); showCtx(e, itemMenu(t)); });
   return row;
 }
 
