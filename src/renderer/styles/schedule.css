@@ -278,3 +278,47 @@ body.dark .sc-field { color-scheme: dark; }
                 border: 1px dashed color-mix(in srgb, var(--fg) 30%, transparent); }
 .sc-todo-chip.remember { font-style: italic; }
 .sc-todo-chip.done { opacity: 0.5; text-decoration: line-through; }
+
+/* === Day notes (js/daynotes.js) ===
+   A subject's colour is --sub, always a palette value set from JS. */
+.dn-rail { display: flex; flex-direction: column; gap: 4px; }
+.dn-rail:empty { display: none; }
+.dn-rail-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.dn-rail-head .sc-rail-head { margin: 0; }
+.dn-rail-add { padding: 1px 8px; font-size: 11px; }
+.dn-plan-pick { max-width: 110px; padding: 1px 4px; font: inherit; font-size: 11px; }
+.dn-item { width: 100%; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 6px;
+           border: 0; box-shadow: none; background: transparent; color: var(--fg); font: inherit; text-align: left; cursor: pointer; }
+.dn-item:hover { background: var(--hover); }
+.dn-item.done { opacity: 0.6; }
+.dn-item-head { display: flex; gap: 6px; align-items: baseline; }
+.dn-item-section { font-size: 12px; font-weight: 700; }
+.dn-item-done { font-size: 10px; color: var(--ok); text-transform: uppercase; }
+.dn-item-subjects { display: flex; flex-wrap: wrap; gap: 3px; }
+.dn-item-text { max-width: 100%; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dn-plan-bar { height: 8px; padding: 1px; margin: 4px 6px 0; }
+.dn-plan-stat { margin: 2px 6px 0; font-size: 11px; color: var(--muted); }
+
+.dn-subject { --sub: var(--muted); display: inline-flex; align-items: center; gap: 3px; padding: 0 5px;
+              background: color-mix(in srgb, var(--sub) 18%, var(--field)); box-shadow: inset 2px 0 0 var(--sub);
+              color: var(--fg); font-size: 11px; line-height: 17px; white-space: nowrap; }
+.dn-subject-x { width: 14px; height: 14px; padding: 0; border: 0; box-shadow: none; background: none;
+                color: var(--muted); font-size: 12px; line-height: 1; cursor: pointer; }
+.dn-subject-x:hover { color: var(--danger); }
+
+.dn-chip { cursor: pointer; font-weight: 600; box-shadow: inset 2px 0 0 var(--ev), inset 0 0 0 1px color-mix(in srgb, var(--ev) 35%, transparent); }
+.dn-chip.done { opacity: 0.55; text-decoration: line-through; }
+.dn-chip-text { overflow: hidden; text-overflow: ellipsis; }
+
+.dn-win { width: min(420px, calc(100vw - 48px)); }
+.dn-body { display: flex; flex-direction: column; gap: 10px; padding: 12px; }
+.dn-row { display: flex; align-items: center; gap: 10px; }
+.dn-label { flex: none; width: 64px; font-family: var(--font-display); font-size: 11px; font-weight: 700; }
+.dn-field { flex: 1; min-width: 0; padding: 4px 6px; font: inherit; font-size: 13px; }
+.dn-subjects-row { align-items: flex-start; }
+.dn-subjects { flex: 1; min-width: 0; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px;
+               background: var(--field); box-shadow: var(--bevel-field); }
+.dn-subject-input { flex: 1; min-width: 120px; padding: 2px 4px; border: 0; box-shadow: none; background: transparent;
+                    color: var(--fg); font: inherit; font-size: 13px; outline: none; }
+.dn-text { width: 100%; resize: vertical; padding: 6px 8px; font: inherit; font-size: 13px; line-height: 1.45; }
+.dn-foot { flex-wrap: wrap; }

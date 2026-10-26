@@ -11,6 +11,7 @@ import { initQuote } from './quotes.js';
 import { initTodo, initReminders } from './todo.js';
 import { initHabits } from './habits.js';
 import { initSchedule } from './schedule.js';
+import { commitDayNote } from './daynotes.js';
 import { initNotes, commitNotes } from './notes.js';
 import { initGraph } from './graph.js';
 import { initSidebar } from './sidebar.js';
@@ -19,6 +20,7 @@ import { initAppearance, initSettings } from './settings.js';
 import { notify } from './notifications.js';
 import { initBackdrop, initBackdropSettings } from './backdrop.js';
 import { initMood } from './mood.js';
+import { initGoals } from './goals.js';
 import { hydrateIcons } from './icons.js';
 import { initChrome } from './chrome.js';
 import { initSound, initSoundSettings } from './sound.js';
@@ -71,6 +73,7 @@ async function main() {
   initTodo();
   initHabits();
   initMood();
+  initGoals();
   initSchedule();
   initNotes();
   initGraph();
@@ -86,7 +89,7 @@ async function main() {
   // beforeunload could be cut off by the teardown.
   // Both editors hold unsaved typing: journals and Notes pages.
   window.ethos.onCommitRequest(() => {
-    Promise.allSettled([commitPending(), commitNotes()])
+    Promise.allSettled([commitPending(), commitNotes(), commitDayNote()])
       .then(() => state.flush())
       .catch(err => console.error('commit before close failed:', err.message))
       .finally(() => window.ethos.closeReady());

@@ -13,6 +13,7 @@
 // handled without a timezone ever entering a record.
 
 import * as state from './state.js';
+import { dnChip, renderDayRail, addDayNote, closeDayNote, initDayNotes } from './daynotes.js';
 import { show, onEnter, onLeave, current } from './views.js';
 import { notify } from './notifications.js';
 import { plannedSpan, openTodoDay } from './todo.js';
@@ -160,6 +161,7 @@ function render() {
   renderSeg();
   renderMini();
   renderAgenda();
+  renderDayRail(iso(cursor));
 
   const node = mode === 'month' ? buildMonth() : buildWeek();
   if (swap) node.classList.add('sc-in-' + swap);
@@ -238,6 +240,7 @@ function buildWeek() {
     const cell = el('div', 'sc-allday-cell');
     cell.dataset.date = iso(d);
     for (const ev of state.eventsOn(iso(d))) if (ev.startMinute === null) cell.append(chip(ev, false));
+    for (const n of state.dayNotesOn(iso(d))) cell.append(dnChip(n));
     // To-dos with no place on the clock: things to remember, untimed tasks.
     for (const t of state.todosOn(iso(d))) if (!plannedSpan(t)) cell.append(todoChip(t));
     allday.append(cell);
@@ -382,6 +385,7 @@ function chip(ev, withTime) {
 // ─── Month ───
 
 const MONTH_CHIPS = 3;
+const MONTH_NOTES = 2;
 
 function buildMonth() {
   const days = visibleDays();
@@ -408,6 +412,15 @@ function buildMonth() {
     num.addEventListener('click', () => { cursor = d; setMode('day'); });
     cell.append(num);
 
+    // Day notes first: in a revision timetable they are what the month is for.
+    const notes = state.dayNotesOn(date);
+    for (const n of notes.slice(0, MONTH_NOTES)) cell.append(dnChip(n));
+    if (notes.length > MONTH_NOTES) {
+      const more = el('button', 'sc-more', '+' + (notes.length - MONTH_NOTES) + ' notes');
+      more.type = 'button';
+      more.addEventListener('click', () => { cursor = d; setMode('day'); });
+      cell.append(more);
+    }
     const evs = state.eventsOn(date);
     for (const ev of evs.slice(0, MONTH_CHIPS)) cell.append(chip(ev, true));
     const open = state.todosOn(date).filter(t => !t.done);
@@ -447,7 +460,7 @@ function renderMini() {
   const grid = el('div', 'sc-mini-grid');
   for (const w of WEEKDAYS) grid.append(el('span', 'sc-mini-dow', w[0]));
 
-  const has = new Set(state.events().map(e => e.date));
+  const has = new Set(state.events().map(e => e.date).concat(state.dayNotes().map(n => n.date)));
   const shown = mode === 'month' ? new Set() : new Set(visibleDays().map(iso));
   const today = todayISO();
   const sel = iso(cursor);
@@ -975,6 +988,8 @@ async function deleteEvent(id) {
 function onKey(e) {
   if (current() !== 'schedule-page') return;
   const typing = e.target.closest && e.target.closest('input, textarea, select, [contenteditable]');
+  // A dialog in front (a day note, a confirm) owns the keyboard.
+  if (document.querySelector('.dlg-scrim')) return;
   if (e.key === 'Escape' && ed.id) { closeEditor(); return; }
   if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
   const k = e.key.toLowerCase();
@@ -985,6 +1000,7 @@ function onKey(e) {
   else if (e.key === 'ArrowLeft') navigate(-1);
   else if (e.key === 'ArrowRight') navigate(1);
   else if (k === 'n') quickAdd();
+  else if (k === 'j') addDayNote(iso(cursor));
   else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedId) deleteEvent(selectedId);
   else return;
   e.preventDefault();
@@ -1022,6 +1038,8 @@ export function initSchedule() {
   document.getElementById('sc-next').addEventListener('click', () => navigate(1));
   document.getElementById('sc-today').addEventListener('click', () => { goTo(new Date()); scheduleRender(scrollToNow); });
   document.getElementById('sc-add').addEventListener('click', quickAdd);
+  document.getElementById('sc-note-add').addEventListener('click', () => addDayNote(iso(cursor)));
+  initDayNotes();
   for (const b of segEl.querySelectorAll('button')) b.addEventListener('click', () => setMode(b.dataset.mode));
 
   initEditor();
@@ -1029,7 +1047,7 @@ export function initSchedule() {
 
   state.subscribe(() => scheduleRender());
   onEnter('schedule-page', () => scheduleRender(() => { if (!scrolledOnce) scrollToNow(); renderSeg(); }));
-  onLeave('schedule-page', closeEditor);
+  onLeave('schedule-page', () => { closeEditor(); closeDayNote(); });
   window.addEventListener('resize', () => { if (current() === 'schedule-page') { renderSeg(); placeEditor(); } });
 
   // The now line moves and "Up next" empties as the day goes on.

@@ -338,6 +338,64 @@ async function run() {
   await js(`${card('.win-btn')}.click()`);
   check('deleting it empties the list', await js(`!document.querySelector('#tm-list li') && !document.getElementById('tm-empty').hidden`));
 
+  console.log('\ngoals');
+  await js(`document.querySelector('[data-view="home"]').click()`);
+  await until(`document.body.dataset.view === 'home'`);
+  check('three goal slots are on the homepage', await js(`document.querySelectorAll('#goals-list .goal').length === 3 && document.querySelectorAll('#goals-list .goal-add').length === 3`));
+  await js(`document.querySelector('.goal[data-horizon="week"] .goal-add').click()`);
+  await until(`!!document.querySelector('.goal-input')`);
+  await js(`(() => { const i = document.querySelector('.goal-input'); i.value = 'Finish chapter 3'; i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' })); })()`);
+  check('a week goal is set and shown', await until(`document.querySelector('.goal[data-horizon="week"] .goal-text')?.textContent === 'Finish chapter 3'`));
+  check('it shows how many days are left', await js(`/\\d+ days left|last day/.test(document.querySelector('.goal[data-horizon="week"] .goal-left').textContent)`));
+  await js(`document.querySelector('.goal[data-horizon="week"] .tick').click()`);
+  check('ticking marks it reached', await until(`document.querySelector('.goal[data-horizon="week"]').classList.contains('done') && document.getElementById('goals-stat').textContent === '1 of 1 reached'`));
+  await wait(800);
+  await shot('goals.png');
+
+  console.log('\nday notes');
+  await js(`document.querySelector('[data-view="schedule-page"]').click()`);
+  await until(`document.body.dataset.view === 'schedule-page'`);
+  await js(`document.getElementById('sc-note-add').click()`);
+  check('"+ Day note" opens the editor', await until(`!!document.querySelector('.dn-win')`));
+  await js(`(() => { const s = document.querySelector('.dn-subject-input');
+    for (const v of ['Maths', 'Physics']) { s.value = v; s.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); } })()`);
+  check('subjects are added as chips', await until(`document.querySelectorAll('.dn-subjects .dn-subject').length === 2`));
+  await js(`document.querySelector('.dn-foot .primary').click()`);
+  check('the note shows on the calendar', await until(`[...document.querySelectorAll('.dn-chip')].some(c => c.textContent === 'Studies: Maths, Physics')`));
+  check('and in the rail, with the plan ahead', await until(`document.querySelectorAll('#dn-rail-day .dn-item').length === 1 && document.querySelectorAll('#dn-rail-plan .dn-item').length === 1`));
+  await wait(800);
+  await shot('day-notes.png');
+  await js(`document.getElementById('sc-note-add').click()`);
+  await until(`!!document.querySelector('.dn-win')`);
+  await js(`document.querySelector('.dn-win .win-btn').click()`);
+  check('an untouched new note is rubbed out', await until(`!document.querySelector('.dn-win') && document.querySelectorAll('#dn-rail-day .dn-item').length === 1`));
+
+  console.log('\nnote tables');
+  check('a note opens with a table button', await newNote('Revision') && await js(`!!document.getElementById('nt-add-table')`));
+  await js(`(() => { const b = document.getElementById('nt-body'); b.value = 'Intro\\n/tracker'; b.focus(); b.setSelectionRange(b.value.length, b.value.length);
+    b.dispatchEvent(new Event('input')); b.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('/tracker inserts a progress tracker', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 1 && document.querySelectorAll('#nt-blocks .nt-th').length === 4`));
+  await js(`(() => { const c = document.querySelector('.nt-td.nt-type-text input'); c.value = 'Algebra'; c.dispatchEvent(new Event('input'));
+    document.querySelector('.nt-td.nt-type-check .tick').click(); })()`);
+  check('ticking a row updates the summary and progress', await until(`document.querySelector('.nt-table-pct')?.textContent === '33%'`));
+  await wait(900);
+  const saved = await js(`import('./js/state.js').then(s => { const p = s.pages().find(p => p.title === 'Revision'); return p && { c: p.content, t: p.tables.length, cell: p.tables[0] && p.tables[0].rows[0].cells }; })`);
+  check('the table is saved in the page', saved && saved.t === 1 && /^Intro\n\{\{table:[a-z0-9]+\}\}$/.test(saved.c) && Object.values(saved.cell).includes('Algebra'), JSON.stringify(saved));
+  await shot('note-table.png');
+
+  console.log('\nnotes tools');
+  await js(`document.getElementById('nt-pin').click()`);
+  check('pinning lists the note under Pinned', await until(`[...document.querySelectorAll('#sb-tree .sb-sub')].some(n => n.textContent === 'Pinned')`));
+  await js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true }))`);
+  check('Ctrl+P opens the switcher', await until(`!!document.querySelector('.qs-input')`));
+  await js(`(() => { const i = document.querySelector('.qs-input'); i.value = 'alph'; i.dispatchEvent(new Event('input'));
+    i.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('Enter opens the match', await until(`!document.querySelector('.qs-input') && document.getElementById('nt-title').value === 'Alpha'`));
+  await js(`document.getElementById('nt-crumb').click()`);
+  await js(`(() => { const s = document.getElementById('nt-search'); s.value = 'algebra'; s.dispatchEvent(new Event('input')); })()`);
+  check('search finds text inside tables', await until(`[...document.querySelectorAll('#nt-recent .nt-card-title')].map(n => n.textContent).join() === 'Revision'`));
+  await js(`(() => { const s = document.getElementById('nt-search'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);
+
   console.log('\nconsole');
   check('no renderer errors', errors.length === 0, errors.join(' | '));
 }

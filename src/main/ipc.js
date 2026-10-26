@@ -1,4 +1,4 @@
-// The entire surface the renderer can reach. Twenty-seven calls, every argument
+// The entire surface the renderer can reach. Thirty-one calls, every argument
 // validated, nothing that takes a path or a filename.
 //
 // Each handler returns { ok: true, ... } or { ok: false, error } rather than
@@ -56,6 +56,12 @@ function register(store, { onRendererReady, timers } = {}) {
     'pages:create': (input) => ({ page: store.createPage(input), ...store.snapshot() }),
     'pages:update': (pageId, patch) => ({ page: store.updatePage(pageId, patch), ...store.snapshot() }),
     'pages:delete': (pageId) => ({ deleted: store.deletePage(pageId), ...store.snapshot() }),
+
+    'goals:set': (input) => ({ goal: store.setGoal(input), ...store.snapshot() }),
+
+    'daynotes:create': (input) => ({ daynote: store.createDayNote(input), ...store.snapshot() }),
+    'daynotes:update': (noteId, patch) => ({ daynote: store.updateDayNote(noteId, patch), ...store.snapshot() }),
+    'daynotes:delete': (noteId) => ({ deleted: store.deleteDayNote(noteId), ...store.snapshot() }),
 
     'timers:arm': (timerId, input) => { timers.arm(timerId, input); return {}; },
     'timers:disarm': (timerId) => { timers.disarm(timerId); return {}; },

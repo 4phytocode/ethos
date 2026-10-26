@@ -115,3 +115,10 @@ body.sb-hidden .back { right: 52px; }
             font-variant-numeric: tabular-nums; background: var(--field); color: var(--fg);
             box-shadow: var(--bevel-field); }
 .sb-badge[hidden] { display: none; }
+
+/* Notes tree: folder counts, drag a note onto a folder, pinned notes. */
+.sb-count { margin-left: auto; padding-right: 4px; font-size: 10px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.sb-row.drop, .sb-section-title.drop { background: var(--accent); color: var(--accent-fg); }
+.sb-row.drop .sb-row-main { color: inherit; }
+.sb-row.dragging { opacity: 0.45; }
+.sb-page.pinned .sb-row-label { font-weight: 600; }

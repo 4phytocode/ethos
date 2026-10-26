@@ -105,6 +105,16 @@ contextBridge.exposeInMainWorld('ethos', {
     remove: (pageId) => call('pages:delete', pageId),
   },
 
+  goals: {
+    set: (input) => call('goals:set', input),
+  },
+
+  daynotes: {
+    create: (input) => call('daynotes:create', input),
+    update: (noteId, patch) => call('daynotes:update', noteId, patch),
+    remove: (noteId) => call('daynotes:delete', noteId),
+  },
+
   events: {
     create: (input) => call('events:create', input),
     update: (eventId, patch) => call('events:update', eventId, patch),

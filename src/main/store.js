@@ -19,6 +19,7 @@ const {
   parseHabit, parseHabitInput, parseHabitToggle,
   parseMood, parseMoodInput,
   parseFolder, parseFolderInput, parsePage, parsePageInput, parsePagePatch,
+  parseGoal, parseGoalInput, parseDayNote, parseDayNoteInput, parseDayNotePatch,
   MAX_DONE_DATES, ValidationError,
 } = require('./schema');
 const { compareEvents } = require('./vault');
@@ -68,6 +69,8 @@ class Store {
     this.folders = [];
     this.pages = [];
     this.moods = [];
+    this.goals = [];
+    this.daynotes = [];
 
     // Which notes still need writing, and whether tags.json, events.json,
     // todos.json or habits.json do.
@@ -79,6 +82,8 @@ class Store {
     this.dirtyHabits = false;
     this.dirtyFolders = false;
     this.dirtyMoods = false;
+    this.dirtyGoals = false;
+    this.dirtyDayNotes = false;
     this.dirtyPages = new Set();
     this.timer = null;
     // The tail of the write queue, and how many passes are queued or running.
@@ -96,6 +101,8 @@ class Store {
     this.folders = state.folders || [];
     this.pages = state.pages || [];
     this.moods = state.moods || [];
+    this.goals = state.goals || [];
+    this.daynotes = state.daynotes || [];
     return this.snapshot();
   }
 
@@ -109,8 +116,10 @@ class Store {
       todos: this.todos.map(t => ({ ...t })),
       habits: this.habits.map(h => ({ ...h, doneDates: [...h.doneDates] })),
       folders: this.folders.map(f => ({ ...f })),
-      pages: this.pages.map(p => ({ ...p, links: [...p.links] })),
+      pages: this.pages.map(p => ({ ...p, links: [...p.links], tables: structuredClone(p.tables) })),
       moods: this.moods.map(m => ({ ...m })),
+      goals: this.goals.map(g => ({ ...g })),
+      daynotes: this.daynotes.map(d => ({ ...d, subjects: [...d.subjects] })),
     };
   }
 
@@ -122,6 +131,8 @@ class Store {
   #touchTodos() { this.dirtyTodos = true; this.#schedule(); }
   #touchHabits() { this.dirtyHabits = true; this.#schedule(); }
   #touchMoods() { this.dirtyMoods = true; this.#schedule(); }
+  #touchGoals() { this.dirtyGoals = true; this.#schedule(); }
+  #touchDayNotes() { this.dirtyDayNotes = true; this.#schedule(); }
   #touchFolders() { this.dirtyFolders = true; this.#schedule(); }
   #touchPage(id) { this.dirtyPages.add(id); this.#schedule(); }
 
@@ -155,6 +166,8 @@ class Store {
       const habits = this.dirtyHabits;
       const folders = this.dirtyFolders;
       const moods = this.dirtyMoods;
+      const goals = this.dirtyGoals;
+      const daynotes = this.dirtyDayNotes;
       const pages = [...this.dirtyPages];
       this.dirtyNotes.clear();
       this.dirtyTags = false;
@@ -163,9 +176,11 @@ class Store {
       this.dirtyHabits = false;
       this.dirtyFolders = false;
       this.dirtyMoods = false;
+      this.dirtyGoals = false;
+      this.dirtyDayNotes = false;
       this.dirtyPages.clear();
       if (notes.length === 0 && !tags && !events && !todos && !habits &&
-          !folders && !moods && pages.length === 0) return;
+          !folders && !moods && !goals && !daynotes && pages.length === 0) return;
 
       for (const id of notes) {
         const note = this.notes.find(n => n.id === id);
@@ -202,6 +217,18 @@ class Store {
           console.error('store: failed to save habits:', err.message);
         }
       }
+      if (goals) {
+        try { await this.vault.saveGoals(this.goals); } catch (err) {
+          this.dirtyGoals = true;
+          console.error('store: failed to save goals:', err.message);
+        }
+      }
+      if (daynotes) {
+        try { await this.vault.saveDayNotes(this.daynotes); } catch (err) {
+          this.dirtyDayNotes = true;
+          console.error('store: failed to save day notes:', err.message);
+        }
+      }
       if (moods) {
         try { await this.vault.saveMoods(this.moods); } catch (err) {
           this.dirtyMoods = true;
@@ -233,7 +260,8 @@ class Store {
   // flags were cleared when it started, so the flags alone would say "clean").
   get hasPendingWrites() {
     return this.passes > 0 || this.dirtyNotes.size > 0 || this.dirtyTags || this.dirtyEvents ||
-      this.dirtyTodos || this.dirtyHabits || this.dirtyFolders || this.dirtyMoods || this.dirtyPages.size > 0;
+      this.dirtyTodos || this.dirtyHabits || this.dirtyFolders || this.dirtyMoods ||
+      this.dirtyGoals || this.dirtyDayNotes || this.dirtyPages.size > 0;
   }
 
   // Drops the pending debounce without writing. For shutdown paths that have
@@ -617,9 +645,13 @@ class Store {
       patch.links = patch.links.filter(l => known.has(l));
     }
     const merged = parsePage({ ...page, ...patch, updatedAt: now });
-    if (page.title === merged.title && page.content === merged.content &&
+    const sameBody = page.title === merged.title && page.content === merged.content &&
         page.folderId === merged.folderId && page.temporary === merged.temporary &&
-        String(page.links) === String(merged.links)) return page;
+        String(page.links) === String(merged.links) &&
+        JSON.stringify(page.tables) === JSON.stringify(merged.tables);
+    if (sameBody && page.pinned === merged.pinned) return page;
+    // Pinning is not an edit: it must not move the note up "Recent".
+    if (sameBody) merged.updatedAt = page.updatedAt;
     Object.assign(page, merged);
     this.#touchPage(page.id);
     return page;
@@ -704,6 +736,71 @@ class Store {
     this.moods.sort((a, b) => (a.date < b.date ? -1 : 1));
     this.#touchMoods();
     return mood;
+  }
+
+  // ─── Goals ───
+
+  // One goal per horizon. Empty text clears that horizon; a new text replaces
+  // the old goal and starts it afresh (not done, new createdAt), because a new
+  // goal is a new commitment rather than an edit of the last one.
+  setGoal(rawInput, now = Date.now()) {
+    const input = parseGoalInput(rawInput);
+    const i = this.goals.findIndex(g => g.horizon === input.horizon);
+    const existing = i === -1 ? null : this.goals[i];
+    if ('text' in input && !input.text) {
+      if (existing) { this.goals.splice(i, 1); this.#touchGoals(); }
+      return null;
+    }
+    if (!existing) {
+      if (!input.text) throw new ValidationError('no goal set for that horizon');
+      const goal = parseGoal({ id: newId('g'), horizon: input.horizon, text: input.text,
+        done: input.done === true, createdAt: now, updatedAt: now });
+      this.goals.push(goal);
+      this.#touchGoals();
+      return goal;
+    }
+    if ('text' in input && input.text !== existing.text) {
+      existing.text = input.text;
+      existing.done = false;
+      existing.createdAt = now;
+    }
+    if ('done' in input) existing.done = input.done;
+    existing.updatedAt = now;
+    this.#touchGoals();
+    return existing;
+  }
+
+  // ─── Day notes ───
+
+  #sortDayNotes() {
+    this.daynotes.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt));
+  }
+
+  createDayNote(rawInput, now = Date.now()) {
+    const input = parseDayNoteInput(rawInput);
+    const note = parseDayNote({ id: newId('d'), ...input, done: false, createdAt: now, updatedAt: now });
+    this.daynotes.push(note);
+    this.#sortDayNotes();
+    this.#touchDayNotes();
+    return note;
+  }
+
+  updateDayNote(noteId, rawPatch, now = Date.now()) {
+    const note = this.daynotes.find(d => d.id === noteId);
+    if (!note) throw new ValidationError('no such day note');
+    const patch = parseDayNotePatch(rawPatch);
+    Object.assign(note, patch, { updatedAt: now });
+    if ('date' in patch) this.#sortDayNotes();
+    this.#touchDayNotes();
+    return note;
+  }
+
+  deleteDayNote(noteId) {
+    const i = this.daynotes.findIndex(d => d.id === noteId);
+    if (i === -1) return false;
+    this.daynotes.splice(i, 1);
+    this.#touchDayNotes();
+    return true;
   }
 
   // ─── Tags ───

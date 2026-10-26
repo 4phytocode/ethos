@@ -130,6 +130,15 @@
   <!-- Homepage -->
   <section id="home" class="view active">
     <h1>Homepage</h1>
+
+    <!-- Week, month and year goals, always in view; see js/goals.js -->
+    <section class="home-goals" aria-labelledby="home-goals-heading">
+      <div class="todo-card-head">
+        <h2 id="home-goals-heading">Goals</h2>
+        <span class="home-goals-stat" id="goals-stat"></span>
+      </div>
+      <ul class="goals-list" id="goals-list"></ul>
+    </section>
     <div class="home-top">
     <figure class="home-quote" id="home-quote">
       <blockquote class="quote-text"></blockquote>
@@ -352,12 +361,15 @@
     <div class="sc-shell">
       <aside class="sc-rail">
         <div class="sc-mini" id="sc-mini"></div>
+        <!-- Day notes: the selected day, then the plan ahead; see js/daynotes.js -->
+        <div class="dn-rail" id="dn-rail-day"></div>
+        <div class="dn-rail" id="dn-rail-plan"></div>
         <div class="sc-agenda-wrap">
           <h2 class="sc-rail-head">Up next</h2>
           <ul class="sc-agenda" id="sc-agenda"></ul>
         </div>
         <p class="sc-hint">Drag on the grid to draw an event. Drag it to move, pull its lower edge to stretch.<br>
-          <kbd>N</kbd> new &middot; <kbd>T</kbd> today &middot; <kbd>D</kbd> <kbd>W</kbd> <kbd>M</kbd> view &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd></p>
+          <kbd>N</kbd> new &middot; <kbd>J</kbd> day note &middot; <kbd>T</kbd> today &middot; <kbd>D</kbd> <kbd>W</kbd> <kbd>M</kbd> view &middot; <kbd>&larr;</kbd> <kbd>&rarr;</kbd></p>
       </aside>
 
       <div class="sc-main">
@@ -375,6 +387,7 @@
               <button type="button" role="tab" data-mode="week">Week</button>
               <button type="button" role="tab" data-mode="month">Month</button>
             </div>
+            <button class="sc-btn" id="sc-note-add" type="button" title="Add a note to this day (J)">+ Day note</button>
             <button class="sc-add" id="sc-add" type="button" title="New event (N)" aria-label="New event">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
             </button>
@@ -418,8 +431,21 @@
         <button class="nt-btn" id="nt-new-temp" type="button">Temporary note</button>
         <button class="nt-btn" id="nt-new-folder" type="button">New folder</button>
         <button class="nt-btn" id="nt-graph" type="button" title="Graph view (Ctrl+G)">Graph view</button>
+        <button class="nt-btn" id="nt-find" type="button" title="Jump to a note (Ctrl+P)">Find note</button>
       </div>
-      <h2 class="nt-sub">Recent</h2>
+      <div class="nt-home-tools">
+        <input class="nt-search" id="nt-search" type="search" placeholder="Search notes..." aria-label="Search notes" maxlength="100" spellcheck="false"/>
+        <select class="nt-sort" id="nt-sort" aria-label="Sort notes">
+          <option value="recent">Recently edited</option>
+          <option value="created">Newest first</option>
+          <option value="title">A to Z</option>
+        </select>
+      </div>
+      <div id="nt-pinned-wrap" hidden>
+        <h2 class="nt-sub">Pinned</h2>
+        <div class="nt-recent" id="nt-pinned"></div>
+      </div>
+      <h2 class="nt-sub" id="nt-recent-head">Recent</h2>
       <div class="nt-recent" id="nt-recent"></div>
     </div>
 
@@ -427,8 +453,11 @@
       <div class="nt-bar">
         <button class="nt-crumb" id="nt-crumb" type="button" title="All notes"></button>
         <div class="nt-bar-tools">
+          <button class="nt-chip" id="nt-add-table" type="button" title="Insert a table at the cursor (or type /table)">+ Table</button>
           <select class="nt-move" id="nt-move" aria-label="Folder"></select>
+          <button class="nt-chip" id="nt-pin" type="button" aria-pressed="false">Pin</button>
           <button class="nt-chip" id="nt-temp" type="button" aria-pressed="false">Mark temporary</button>
+          <button class="nt-chip" id="nt-more" type="button" aria-label="More note actions" title="More">⋯</button>
           <button class="nt-chip nt-danger" id="nt-delete" type="button">Delete</button>
         </div>
       </div>
@@ -453,7 +482,8 @@
           <div class="nt-links-chips" id="nt-links-in"></div>
         </div>
       </div>
-      <textarea class="nt-body" id="nt-body" data-typing-sound placeholder="Write something..."></textarea>
+      <!-- Text and tables, in page order; see notes.js "Blocks" -->
+      <div class="nt-blocks" id="nt-blocks"></div>
     </article>
   </section>
 
