@@ -14,7 +14,7 @@
 
 import * as state from './state.js';
 import { dnChip, renderDayRail, addDayNote, closeDayNote, initDayNotes } from './daynotes.js';
-import { show, onEnter, onLeave, current } from './views.js';
+import { show, showCtx, onEnter, onLeave, current } from './views.js';
 import { notify } from './notifications.js';
 import { plannedSpan, openTodoDay } from './todo.js';
 import { Spring } from './spring.js';
@@ -335,6 +335,7 @@ function block({ ev, s, e, col, n }) {
   grip.setAttribute('aria-hidden', 'true');
   b.append(grip);
   b.addEventListener('keydown', (k) => { if (k.key === 'Enter') openEditor(ev.id); });
+  b.addEventListener('contextmenu', (m) => evMenu(m, ev));
   return b;
 }
 
@@ -379,7 +380,35 @@ function chip(ev, withTime) {
   if (withTime && ev.startMinute !== null) c.append(el('span', 'sc-chip-time', clock(ev.startMinute)));
   c.append(el('span', 'sc-chip-title', ev.title));
   c.addEventListener('keydown', (k) => { if (k.key === 'Enter') openEditor(ev.id); });
+  c.addEventListener('contextmenu', (m) => evMenu(m, ev));
   return c;
+}
+
+// Right-click on an event: open, done, copy and delete without the editor.
+function evMenu(e, ev) {
+  e.preventDefault();
+  e.stopPropagation();
+  const copyTo = (days) => copyEvent(ev, days);
+  showCtx(e, [
+    { label: 'Open', onClick: () => openEditor(ev.id) },
+    { label: ev.done ? 'Mark not done' : 'Mark done', onClick: () =>
+      state.updateEvent(ev.id, { done: !ev.done }).catch(err => notify.error('Could not save the event', err.message)) },
+    { label: 'Duplicate', onClick: () => copyTo(0) },
+    { label: 'Copy to the next day', onClick: () => copyTo(1) },
+    { label: 'Copy to next week', onClick: () => copyTo(7) },
+    { label: 'Delete', onClick: () => deleteEvent(ev.id) },
+  ]);
+}
+
+async function copyEvent(ev, days) {
+  const { title, startMinute, durationMinutes, note, color, remindMinutes } = ev;
+  const date = iso(addDays(fromISO(ev.date), days));
+  try {
+    await state.createEvent({ title, date, startMinute, durationMinutes, note, color, remindMinutes });
+    notify.info(days === 0 ? 'Duplicated' : 'Copied', title + (days ? ' · ' + dayLabel(date) : ''));
+  } catch (err) {
+    notify.error('Could not copy the event', err.message);
+  }
 }
 
 // ─── Month ───
@@ -411,6 +440,7 @@ function buildMonth() {
     num.title = 'Open this day';
     num.addEventListener('click', () => { cursor = d; setMode('day'); });
     cell.append(num);
+    cell.addEventListener('dblclick', (e) => { if (!e.target.closest('.sc-chip')) { cursor = d; setMode('day'); } });
 
     // Day notes first: in a revision timetable they are what the month is for.
     const notes = state.dayNotesOn(date);
@@ -975,6 +1005,7 @@ async function deleteEvent(id) {
       title: 'Event deleted', message: title, type: 'info',
       action: { label: 'Undo', onClick: () => {
         state.createEvent({ title, date, startMinute, durationMinutes, note, color, remindMinutes })
+          .then(back => (ev.done && back ? state.updateEvent(back.id, { done: true }) : null))
           .catch(err => notify.error('Could not restore the event', err.message));
       } },
     });

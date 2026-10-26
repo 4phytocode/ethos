@@ -1,5 +1,5 @@
-/* The Timer page (js/timer.js). The form is a group box; each timer is a small
-   window with a sunken readout, a block progress bar and its controls. */
+/* The Timer page (js/timer.js). The form is a group box around a dial; each
+   timer is a small window with a ring that empties as it runs. */
 
 #timer-page { flex-direction: column; padding: 56px 36px 56px; gap: 14px; }
 #timer-page h1 { font-size: 33px; font-weight: 700; margin: 0; }
@@ -14,11 +14,31 @@
 .tm-presets { display: flex; flex-wrap: wrap; gap: 6px; }
 .tm-preset { padding: 4px 10px; font-size: 12px; }
 
-.tm-fields { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; }
+.tm-fields { display: flex; flex-wrap: wrap; align-items: center; gap: 22px; }
+.tm-side { flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .tm-field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--muted); }
-.tm-field input { width: 76px; padding: 6px 8px; font-size: 14px; font-variant-numeric: tabular-nums; }
-.tm-field-name { flex: 1 1 220px; }
-.tm-field-name input { width: 100%; box-sizing: border-box; }
+.tm-field-name input { width: 100%; box-sizing: border-box; padding: 6px 8px; font-size: 14px; }
+
+/* The dial: one lap is an hour. Drag the ring, scroll it, or type in the middle. */
+.tm-dial { position: relative; flex: none; width: 220px; height: 220px; user-select: none; }
+.tm-dial svg { width: 100%; height: 100%; cursor: grab; touch-action: none; }
+.tm-dial.dragging svg { cursor: grabbing; }
+.tm-dial-track { fill: var(--field); stroke: var(--line); stroke-width: 14; }
+.tm-dial-arc { fill: none; stroke: var(--accent); stroke-width: 14; stroke-dasharray: 100 100;
+               transform: rotate(-90deg); transform-origin: 110px 110px; transition: stroke-dashoffset 0.12s; }
+.tm-dial.dragging .tm-dial-arc { transition: none; }
+.tm-dial-ticks line { stroke: var(--muted); stroke-width: 1; opacity: 0.5; }
+.tm-dial-ticks line.big { stroke-width: 2; opacity: 0.9; }
+.tm-dial-knob { fill: var(--fg); stroke: var(--face); stroke-width: 3; transition: r 0.12s; }
+.tm-dial:hover .tm-dial-knob, .tm-dial.dragging .tm-dial-knob { r: 13; }
+.tm-dial-center { position: absolute; inset: 40px; display: flex; flex-direction: column; align-items: center;
+                  justify-content: center; gap: 4px; pointer-events: none; }
+.tm-dial-text { pointer-events: auto; width: 128px; padding: 2px 0; text-align: center; font-family: var(--font-display);
+                font-size: 26px; font-variant-numeric: tabular-nums; background: transparent !important;
+                box-shadow: none !important; color: var(--fg); cursor: text; border-radius: var(--radius); }
+.tm-dial-text:hover { box-shadow: inset 0 -1px 0 var(--muted) !important; }
+.tm-dial-text:focus { outline: none; box-shadow: inset 0 -2px 0 var(--accent) !important; }
+.tm-dial-hint { font-size: 11px; color: var(--muted); }
 
 .tm-form-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 /* The error doubles as the spacer that pushes the submit button right. */
@@ -37,14 +57,26 @@
 
 /* ---- the timers ---- */
 
-.tm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px;
+.tm-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;
            max-width: 880px; margin: 4px 0 0; padding: 0; list-style: none; }
 .tm-body { display: flex; flex-direction: column; gap: 8px; padding: 10px 8px 8px; }
 
-.tm-face { display: flex; flex-direction: column; align-items: center; gap: 4px;
-           padding: 14px 8px 8px; background: var(--field); box-shadow: var(--bevel-field); }
-/* The pixel face is drawn on an 11px grid, so the readout is 33px. */
-.tm-time { font-family: var(--font-display); font-size: 33px; line-height: 1;
+/* Each timer is a ring that empties as it runs; its middle starts and pauses it. */
+.tm-ring { position: relative; width: 176px; height: 176px; margin: 4px auto 2px; }
+.tm-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tm-ring-track { fill: none; stroke: var(--line); stroke-width: 7; }
+.tm-ring-arc { fill: none; stroke: var(--muted); stroke-width: 7; stroke-linecap: round; stroke-dasharray: 100 100;
+               transform: rotate(-90deg); transform-origin: 60px 60px; transition: stroke-dashoffset 0.25s linear; }
+.tm-running .tm-ring-arc { stroke: var(--accent); }
+.tm-paused .tm-ring-arc { stroke: var(--fg); }
+.tm-done .tm-ring-arc { stroke: var(--warn); }
+.tm-face { position: absolute; inset: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+           gap: 4px; padding: 0; border-radius: 50%; background: var(--field); box-shadow: var(--bevel-field);
+           transition: transform 0.15s, background 0.15s; }
+.tm-face:hover { transform: scale(1.04); background: color-mix(in srgb, var(--accent) 10%, var(--field)); }
+.tm-face:active:not(:disabled) { transform: scale(0.97); box-shadow: var(--bevel-field); }
+.tm-idle .tm-ring { cursor: ns-resize; }
+.tm-time { font-family: var(--font-display); font-size: 28px; line-height: 1;
            font-variant-numeric: tabular-nums; color: var(--fg); }
 .tm-running .tm-time { color: var(--accent); }
 .tm-done .tm-time { color: var(--warn); }

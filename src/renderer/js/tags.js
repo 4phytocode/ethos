@@ -135,7 +135,10 @@ async function assign(tagId) {
   try {
     // One tag per note for now, but stored as a list so many-to-many is a UI
     // change later and not another migration.
-    await state.updateNote(currentNoteId, { tagIds: [tagId] });
+    // Clicking the tag a note already has takes it off.
+    const note = state.note(currentNoteId);
+    const has = note && note.tagIds.includes(tagId);
+    await state.updateNote(currentNoteId, { tagIds: has ? [] : [tagId] });
     openPanel(null);
   } catch (err) {
     notify.error('Could not apply that tag', err.message);

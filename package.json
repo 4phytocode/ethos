@@ -1,6 +1,6 @@
 {
   "name": "ethos",
-  "version": "0.1.0-demo",
+  "version": "1.0.0",
   "productName": "Ethos",
   "description": "Ethos desktop display",
   "main": "src/main/index.js",

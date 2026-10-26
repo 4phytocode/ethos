@@ -43,3 +43,8 @@
 .hb-remove:hover { background: var(--hover); color: var(--fg); }
 .hb-empty { margin: 0; font-size: 13px; color: var(--muted); }
 .hb-empty[hidden] { display: none; }
+
+/* The whole row ticks; the grid cells are shaded inline by habits.js. */
+.hb-item, .home-habit { cursor: pointer; }
+#hb-grid .jr-cell { transition: transform 0.12s; }
+#hb-grid .jr-cell:hover { transform: scale(1.35); }

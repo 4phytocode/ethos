@@ -293,6 +293,16 @@ async function run() {
   // A preset fills the length.
   await js(`document.querySelector('.tm-preset[data-secs="1500"]').click()`);
   check('a preset fills the length', await js(`document.getElementById('tm-m').value === '25' && document.getElementById('tm-h').value === '0'`));
+  check('the dial shows the length in its middle', await js(`document.getElementById('tm-text').value === '25:00'`));
+  await js(`(() => { const t = document.getElementById('tm-text'); t.focus(); t.value = '1h 30m';
+    t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('typing a length in the dial sets it', await js(`document.getElementById('tm-h').value === '1' && document.getElementById('tm-m').value === '30' && /hour/.test(document.getElementById('tm-dial-hint').textContent)`));
+  await js(`document.getElementById('tm-dial').dispatchEvent(new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true }))`);
+  check('scrolling the dial adds a minute', await js(`document.getElementById('tm-m').value === '31'`));
+  await js(`(() => { const t = document.getElementById('tm-text'); t.focus(); t.value = 'soon';
+    t.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('a length it cannot read is refused', await js(`document.getElementById('tm-error').textContent !== '' && document.getElementById('tm-m').value === '31'`));
+  await js(`(() => { document.getElementById('tm-text').blur(); document.querySelector('.tm-preset[data-secs="1500"]').click(); })()`);
   // A 2 second timer, alarm off (the test should be quiet), banner off.
   await js(`(() => {
     document.getElementById('tm-name').value = 'Tea';
@@ -307,6 +317,8 @@ async function run() {
   await js(`${card('.tm-go')}.click()`);
   check('starting it shows it running, with a badge in the sidebar', await until(`${card()}.classList.contains('tm-running') && !document.getElementById('sb-timer-badge').hidden`));
   check('the status row counts it', await js(`document.querySelector('#timer-page .view-status').textContent === '1 running'`));
+  await shot('timer.png');
+  check('the ring is drawn on the card', await js(`!!${card('.tm-ring-arc')}`));
   check('main rings it at the end', await until(`${card()}.classList.contains('tm-done')`, 4000));
   check("a Time's up toast appears", await js(`[...document.querySelectorAll('.ethos-notif-title')].some(n => n.textContent === "Time's up")`));
   check('the badge goes when nothing is running', await js(`document.getElementById('sb-timer-badge').hidden`));
@@ -382,6 +394,10 @@ async function run() {
   const saved = await js(`import('./js/state.js').then(s => { const p = s.pages().find(p => p.title === 'Revision'); return p && { c: p.content, t: p.tables.length, cell: p.tables[0] && p.tables[0].rows[0].cells }; })`);
   check('the table is saved in the page', saved && saved.t === 1 && /^Intro\n\{\{table:[a-z0-9]+\}\}$/.test(saved.c) && Object.values(saved.cell).includes('Algebra'), JSON.stringify(saved));
   await shot('note-table.png');
+  await js(`document.getElementById('nt-add-table').click()`);
+  check('+ Table opens its menu and keeps it open', await until(`!!document.querySelector('.ctx-menu .menu-item')`));
+  await js(`document.querySelector('.ctx-menu .menu-item').click()`);
+  check('picking from the + Table menu adds a table', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 2`));
 
   console.log('\nnotes tools');
   await js(`document.getElementById('nt-pin').click()`);
