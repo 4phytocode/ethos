@@ -135,6 +135,13 @@ function goTo(date) {
   scheduleRender();
 }
 
+// Shows a day, and an event's editor if one is named. Used by the global search.
+export function openScheduleDay(dateISO, { eventId = null } = {}) {
+  goTo(fromISO(dateISO));
+  show('schedule-page');
+  if (eventId) setTimeout(() => { if (state.event(eventId)) openEditor(eventId); }, 120);
+}
+
 // ─── Rendering ───
 // Coalesced to one frame. It also means a mutation's return value is in hand
 // before the redraw runs, so "the event just drawn" can be marked for it.
@@ -352,7 +359,7 @@ function todoOpen(node, t) {
 function todoBlock({ todo: t, s, e, col, n }) {
   const b = el('div', 'sc-todo' + (t.done ? ' done' : ''));
   b.tabIndex = 0;
-  b.title = 'From your to-do list';
+  b.title = t.description ? t.description.slice(0, 200) : 'From your to-do list';
   b.style.top = s * HOUR_PX / 60 + 'px';
   b.style.height = Math.max(18, (e - s) * HOUR_PX / 60 - 2) + 'px';
   b.style.left = 'calc(' + (col / n * 100) + '% + 2px)';
@@ -366,7 +373,7 @@ function todoBlock({ todo: t, s, e, col, n }) {
 function todoChip(t) {
   const c = el('div', 'sc-chip sc-todo-chip' + (t.kind === 'remember' ? ' remember' : '') + (t.done ? ' done' : ''));
   c.tabIndex = 0;
-  c.title = t.kind === 'remember' ? 'To remember' : 'To-do with no time yet';
+  c.title = t.description ? t.description.slice(0, 200) : (t.kind === 'remember' ? 'To remember' : 'To-do with no time yet');
   c.append(el('span', 'sc-chip-title', (t.kind === 'remember' ? 'Remember: ' : '') + t.title));
   todoOpen(c, t);
   return c;

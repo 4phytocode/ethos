@@ -18,7 +18,7 @@ const {
   parseTodo, parseTodoInput, parseTodoPatch, parseTodoPlace,
   parseHabit, parseHabitInput, parseHabitToggle,
   parseMood, parseMoodInput,
-  parseFolder, parseFolderInput, parsePage, parsePageInput, parsePagePatch,
+  parseFolder, parseFolderInput, parseFolderPatch, MAX_FOLDER_DEPTH, parsePage, parsePageInput, parsePagePatch,
   parseGoal, parseGoalInput, parseDayNote, parseDayNoteInput, parseDayNotePatch,
   MAX_DONE_DATES, ValidationError,
 } = require('./schema');
@@ -99,6 +99,7 @@ class Store {
     this.todos = state.todos;
     this.habits = state.habits;
     this.folders = state.folders || [];
+    this.#repairFolders();
     this.pages = state.pages || [];
     this.moods = state.moods || [];
     this.goals = state.goals || [];
@@ -115,8 +116,8 @@ class Store {
       events: this.events.map(e => ({ ...e, tagIds: [...e.tagIds] })),
       todos: this.todos.map(t => ({ ...t })),
       habits: this.habits.map(h => ({ ...h, doneDates: [...h.doneDates] })),
-      folders: this.folders.map(f => ({ ...f })),
-      pages: this.pages.map(p => ({ ...p, links: [...p.links], tables: structuredClone(p.tables) })),
+      folders: this.folders.map(f => ({ ...f, tagIds: [...f.tagIds] })),
+      pages: this.pages.map(p => ({ ...p, links: [...p.links], tables: structuredClone(p.tables), blocks: structuredClone(p.blocks) })),
       moods: this.moods.map(m => ({ ...m })),
       goals: this.goals.map(g => ({ ...g })),
       daynotes: this.daynotes.map(d => ({ ...d, subjects: [...d.subjects] })),
@@ -408,7 +409,7 @@ class Store {
     const input = parseTodoInput(rawInput);
     const todo = parseTodo({
       id: newId('k'), title: input.title, kind: input.kind, date: input.date,
-      minutes: input.minutes, startMinute: input.startMinute,
+      minutes: input.minutes, startMinute: input.startMinute, description: input.description,
       done: false, dueAt: null, notified: false, createdAt: now, updatedAt: now,
     });
     this.todos.push(todo);
@@ -425,7 +426,8 @@ class Store {
 
     const unchanged = todo.title === merged.title && todo.date === merged.date &&
       todo.minutes === merged.minutes && todo.done === merged.done &&
-      todo.kind === merged.kind && todo.startMinute === merged.startMinute;
+      todo.kind === merged.kind && todo.startMinute === merged.startMinute &&
+      todo.description === merged.description;
     if (unchanged) return todo;
 
     // A different estimate or a different day is a different plan, so a
@@ -585,34 +587,119 @@ class Store {
 
   // ─── Notes section: folders and pages ───
 
+  // How many levels a folder sits at (a top-level folder is 1), and how many
+  // levels its own subtree has (a folder with no subfolders is 1).
+  #folderDepth(folderId) {
+    let n = 0;
+    for (let cur = this.folders.find(f => f.id === folderId); cur && n < 100; n++) {
+      cur = cur.parentId ? this.folders.find(f => f.id === cur.parentId) : null;
+    }
+    return n;
+  }
+
+  #folderHeight(folderId) {
+    let best = 0;
+    for (const f of this.folders) if (f.parentId === folderId) best = Math.max(best, this.#folderHeight(f.id));
+    return best + 1;
+  }
+
+  // Every folder inside this one, at any depth.
+  #folderDescendants(folderId) {
+    const out = new Set();
+    const walk = (id) => {
+      for (const f of this.folders) if (f.parentId === id && !out.has(f.id)) { out.add(f.id); walk(f.id); }
+    };
+    walk(folderId);
+    return out;
+  }
+
+  // A folder whose parent is gone, or that sits in a loop, goes to the top
+  // level: a vault edited by hand must still open. A tag that no longer exists
+  // is dropped from the folder.
+  #repairFolders() {
+    const ids = new Set(this.folders.map(f => f.id));
+    const tagIds = new Set(this.tags.map(t => t.id));
+    let changed = false;
+    for (const f of this.folders) {
+      if (f.parentId && !ids.has(f.parentId)) { f.parentId = null; changed = true; }
+    }
+    for (const f of this.folders) {
+      const seen = new Set([f.id]);
+      for (let cur = f; cur.parentId; ) {
+        if (seen.has(cur.parentId)) { console.error('store: folder loop repaired at ' + f.id); f.parentId = null; changed = true; break; }
+        seen.add(cur.parentId);
+        cur = this.folders.find(x => x.id === cur.parentId);
+      }
+    }
+    for (const f of this.folders) {
+      const kept = f.tagIds.filter(t => tagIds.has(t));
+      if (kept.length !== f.tagIds.length) { f.tagIds = kept; changed = true; }
+    }
+    if (changed) this.dirtyFolders = true;
+  }
+
   createFolder(rawInput, now = Date.now()) {
     const input = parseFolderInput(rawInput);
-    const folder = parseFolder({ id: newId('f'), name: input.name, createdAt: now, updatedAt: now });
+    this.#knownFolder(input.parentId);
+    if (input.parentId !== null && this.#folderDepth(input.parentId) + 1 > MAX_FOLDER_DEPTH) {
+      throw new ValidationError('folders can go ' + MAX_FOLDER_DEPTH + ' levels deep');
+    }
+    const folder = parseFolder({
+      id: newId('f'), name: input.name, parentId: input.parentId, createdAt: now, updatedAt: now,
+    });
     this.folders.push(folder);
     this.#touchFolders();
     return folder;
   }
 
-  renameFolder(folderId, rawInput, now = Date.now()) {
+  // Name, place, colour and tags. The merged record is what gets validated.
+  updateFolder(folderId, rawPatch, now = Date.now()) {
     const folder = this.folders.find(f => f.id === folderId);
     if (!folder) throw new ValidationError('no such folder');
-    const { name } = parseFolderInput(rawInput);
-    if (name === folder.name) return folder;
-    folder.name = name;
-    folder.updatedAt = now;
+    const patch = parseFolderPatch(rawPatch);
+    if ('parentId' in patch) {
+      this.#knownFolder(patch.parentId);
+      if (patch.parentId === folderId) throw new ValidationError('a folder cannot go inside itself');
+      if (patch.parentId !== null && this.#folderDescendants(folderId).has(patch.parentId)) {
+        throw new ValidationError('a folder cannot go inside one of its own folders');
+      }
+      const above = patch.parentId === null ? 0 : this.#folderDepth(patch.parentId);
+      if (above + this.#folderHeight(folderId) > MAX_FOLDER_DEPTH) {
+        throw new ValidationError('folders can go ' + MAX_FOLDER_DEPTH + ' levels deep');
+      }
+    }
+    if (patch.tagIds) {
+      const live = new Set(this.tags.map(t => t.id));
+      if (patch.tagIds.some(t => !live.has(t))) throw new ValidationError('no such tag');
+    }
+    const merged = parseFolder({ ...folder, ...patch, updatedAt: now });
+    const same = folder.name === merged.name && folder.parentId === merged.parentId &&
+      folder.color === merged.color && String(folder.tagIds) === String(merged.tagIds);
+    if (same) return folder;
+    Object.assign(folder, merged);
     this.#touchFolders();
     return folder;
   }
 
-  // Deleting a folder never deletes its pages: they become unfiled.
+  renameFolder(folderId, rawInput, now = Date.now()) {
+    const { name } = parseFolderInput(rawInput);
+    return this.updateFolder(folderId, { name }, now);
+  }
+
+  // Deleting a folder never deletes a note: its subfolders and its notes move
+  // up to its own parent (the top level, if it had none).
   deleteFolder(folderId, now = Date.now()) {
     const i = this.folders.findIndex(f => f.id === folderId);
     if (i === -1) return false;
+    const parentId = this.folders[i].parentId;
     this.folders.splice(i, 1);
+    for (const f of this.folders) {
+      if (f.parentId === folderId) { f.parentId = parentId; f.updatedAt = now; }
+    }
     this.#touchFolders();
     for (const page of this.pages) {
       if (page.folderId === folderId) {
-        page.folderId = null;
+        page.folderId = parentId;
         page.updatedAt = now;
         this.#touchPage(page.id);
       }
@@ -630,7 +717,7 @@ class Store {
     const input = parsePageInput(rawInput);
     this.#knownFolder(input.folderId);
     const page = parsePage({
-      id: newId('p'), title: '', content: '', folderId: input.folderId,
+      id: newId('p'), title: '', folderId: input.folderId,
       temporary: input.temporary, links: [], createdAt: now, updatedAt: now,
     });
     this.pages.push(page);
@@ -649,8 +736,8 @@ class Store {
       const known = new Set(this.pages.map(p => p.id));
       patch.links = patch.links.filter(l => known.has(l));
     }
-    const merged = parsePage({ ...page, ...patch, updatedAt: now });
-    const sameBody = page.title === merged.title && page.content === merged.content &&
+    const merged = parsePage({ ...page, ...patch, updatedAt: now }, { strict: true });
+    const sameBody = page.title === merged.title && JSON.stringify(page.blocks) === JSON.stringify(merged.blocks) &&
         page.folderId === merged.folderId && page.temporary === merged.temporary &&
         String(page.links) === String(merged.links) &&
         JSON.stringify(page.tables) === JSON.stringify(merged.tables);
@@ -847,7 +934,30 @@ class Store {
         this.#touchEvents();
       }
     }
+    for (const folder of this.folders) {
+      if (folder.tagIds.includes(tagId)) {
+        folder.tagIds = folder.tagIds.filter(id => id !== tagId);
+        folder.updatedAt = Date.now();
+        this.#touchFolders();
+      }
+    }
     return true;
+  }
+
+  // Delete image files no page uses any more. A file younger than a day is kept
+  // whatever it says: an image can be imported before the page that shows it is
+  // saved. Returns how many were removed; a failed delete is skipped.
+  async sweepAssets(now = Date.now(), graceMs = 24 * 60 * 60 * 1000) {
+    const used = new Set();
+    for (const page of this.pages) for (const b of page.blocks) if (b.type === 'image') used.add(b.asset);
+    let removed = 0;
+    for (const { name, mtimeMs } of await this.vault.listAssets()) {
+      if (used.has(name) || now - mtimeMs < graceMs) continue;
+      try { await this.vault.deleteAsset(name); removed += 1; } catch (err) {
+        console.error('store: could not remove asset ' + name + ':', err.message);
+      }
+    }
+    return removed;
   }
 }
 

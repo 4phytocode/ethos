@@ -96,6 +96,7 @@ contextBridge.exposeInMainWorld('ethos', {
   folders: {
     create: (input) => call('folders:create', input),
     rename: (folderId, input) => call('folders:rename', folderId, input),
+    update: (folderId, patch) => call('folders:update', folderId, patch),
     remove: (folderId) => call('folders:delete', folderId),
   },
 
@@ -103,6 +104,14 @@ contextBridge.exposeInMainWorld('ethos', {
     create: (input) => call('pages:create', input),
     update: (pageId, patch) => call('pages:update', pageId, patch),
     remove: (pageId) => call('pages:delete', pageId),
+  },
+
+  assets: {
+    import: (bytes) => call('assets:import', bytes),
+  },
+
+  app: {
+    shutdown: () => call('app:shutdown'),
   },
 
   goals: {

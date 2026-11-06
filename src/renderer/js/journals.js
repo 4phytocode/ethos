@@ -559,6 +559,8 @@ function startRename(noteId) {
 
 // ─── Editor ───
 
+export function openJournalNote(noteId) { return openNote(noteId); }
+
 async function openNote(noteId) {
   await persist();
   const note = state.note(noteId);

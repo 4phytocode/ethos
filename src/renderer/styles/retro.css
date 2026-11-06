@@ -149,6 +149,18 @@ input[type="time"], input[type="date"], input:not([type]), textarea, select {
   outline: none;
 }
 .menu-item:disabled { color: var(--muted); }
+.menu-item.sub-open:not(:hover) { background: var(--hover); }
+.menu-item.danger { color: var(--danger); }
+.menu-item.danger:hover:not(:disabled), .menu-item.danger:focus-visible { color: var(--accent-fg); }
+.menu-lead { flex: none; width: 14px; height: 14px; display: inline-flex; align-items: center; justify-content: center; }
+.menu-swatch { display: block; width: 10px; height: 10px; box-shadow: 0 0 0 1px var(--fg); }
+.menu-check::before { content: ""; width: 6px; height: 6px; background: currentColor; }
+.menu-label { flex: 1; min-width: 0; white-space: nowrap; }
+.menu-hint { flex: none; margin-left: 18px; font-size: 12px; color: var(--muted); }
+.menu-item:hover:not(:disabled) .menu-hint, .menu-item:focus-visible .menu-hint { color: inherit; }
+.menu-arrow { flex: none; margin-left: 14px; width: 0; height: 0; border-top: 4px solid transparent;
+              border-bottom: 4px solid transparent; border-left: 5px solid currentColor; }
+.menu-heading { padding: 4px 6px 2px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
 .menu-sep { height: 2px; margin: 3px 2px; border-top: 1px solid var(--lo); border-bottom: 1px solid var(--hi); }
 
 /* ---- group box: a labelled etched frame (98 Date/Time, site fieldsets) ----- */
@@ -256,3 +268,11 @@ textarea { caret-color: var(--accent); }
   button, button:active:not(:disabled) { transition: none; transform: none; }
   .view.active { animation: none; }
 }
+
+/* ---- form dialog (js/dialog.js formDialog) -------------------------------- */
+.dlg-field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+.dlg-field input { width: 100%; box-sizing: border-box; padding: 5px 7px; font-family: inherit; font-size: 14px; }
+.dlg-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.dlg-swatch { width: 22px; height: 22px; padding: 0; border: 0; box-shadow: var(--bevel-out); cursor: pointer; }
+.dlg-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--fg); }
+.dlg-error { margin: 0; min-height: 1.2em; font-size: 12px; color: var(--danger); }

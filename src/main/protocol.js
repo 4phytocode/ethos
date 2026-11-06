@@ -11,6 +11,7 @@ const path = require('path');
 const fs = require('fs/promises');
 const { pathToFileURL } = require('url');
 const { protocol, net } = require('electron');
+const { ASSET_NAME } = require('./schema');
 
 const SCHEME = 'app';
 const HOST = 'ethos';
@@ -40,6 +41,8 @@ const TYPES = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
   '.jpg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
   '.woff2': 'font/woff2',
   '.ttf': 'font/ttf',
   '.otf': 'font/otf',
@@ -63,7 +66,12 @@ function headers(filePath) {
   };
 }
 
-function handle(rendererRoot) {
+// Images a page uses live in the vault, not in the renderer folder, and are
+// reached only through this prefix and only by our own file names.
+const ASSET_PREFIX = '/vault-assets/';
+
+// `assets.read(name)` returns the file's bytes, or null when it is missing.
+function handle(rendererRoot, assets) {
   const root = path.resolve(rendererRoot);
 
   protocol.handle(SCHEME, async (request) => {
@@ -79,6 +87,14 @@ function handle(rendererRoot) {
       return new Response('Bad request', { status: 400 });
     }
     if (rel === '/' || rel === '') rel = '/' + INDEX;
+
+    if (rel.startsWith(ASSET_PREFIX)) {
+      const name = rel.slice(ASSET_PREFIX.length);
+      if (!assets || !ASSET_NAME.test(name)) return new Response('Not found', { status: 404 });
+      const bytes = await assets.read(name);
+      if (!bytes) return new Response('Not found', { status: 404 });
+      return new Response(bytes, { status: 200, headers: headers(name) });
+    }
 
     const target = path.resolve(root, '.' + rel);
     if (target !== root && !target.startsWith(root + path.sep)) {

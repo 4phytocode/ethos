@@ -115,6 +115,45 @@ export async function toggleHabit(id, date, done) {
 export async function setMood(input) { return (await apply(await window.ethos.moods.set(input))).mood; }
 
 export async function createFolder(input) { return (await apply(await window.ethos.folders.create(input))).folder; }
+export async function updateFolder(id, patch) { return (await apply(await window.ethos.folders.update(id, patch))).folder; }
+
+// Folders form a tree through parentId (null = top level). These read the cache.
+const byName = (a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+export function folderChildren(parentId) {
+  return cache.folders.filter(f => (f.parentId || null) === parentId).sort(byName);
+}
+// From the top level down to this folder.
+export function folderChain(id) {
+  const out = [];
+  for (let f = folder(id); f && out.length < 20; f = f.parentId ? folder(f.parentId) : null) out.unshift(f);
+  return out;
+}
+export function folderPath(id, sep = ' / ') { return folderChain(id).map(f => f.name).join(sep); }
+export function folderDepth(id) { return folderChain(id).length; }
+export function folderHeight(id) {
+  let best = 0;
+  for (const c of folderChildren(id)) best = Math.max(best, folderHeight(c.id));
+  return best + 1;
+}
+export function folderDescendants(id) {
+  const out = new Set();
+  const walk = (p) => { for (const c of folderChildren(p)) { out.add(c.id); walk(c.id); } };
+  walk(id);
+  return out;
+}
+// Every folder in tree order, with its level (1 = top level).
+export function foldersInOrder() {
+  const out = [];
+  const walk = (p, depth) => { for (const c of folderChildren(p)) { out.push({ folder: c, depth }); walk(c.id, depth + 1); } };
+  walk(null, 1);
+  return out;
+}
+// Notes in a folder and in every folder inside it.
+export function noteCountDeep(id) {
+  const ids = folderDescendants(id);
+  ids.add(id);
+  return cache.pages.filter(p => ids.has(p.folderId)).length;
+}
 export async function renameFolder(id, input) { return (await apply(await window.ethos.folders.rename(id, input))).folder; }
 export async function removeFolder(id) { await apply(await window.ethos.folders.remove(id)); }
 

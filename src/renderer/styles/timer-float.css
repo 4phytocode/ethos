@@ -1,0 +1,19 @@
+/* Floating timers (js/timer-float.js): over every view, below dialogs and toasts. */
+
+#tm-floats { position: fixed; inset: 0; z-index: 250; pointer-events: none; }
+.tmf { position: absolute; pointer-events: auto; left: 0; top: 0; }
+.tmf-bar { cursor: grab; user-select: none; touch-action: none; }
+.tmf.dragging, .tmf.dragging .tmf-bar { cursor: grabbing; }
+.tmf .win-title-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tmf-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; color: var(--fg); }
+.tmf.min .tmf-body { display: none; }
+.tmf-time { font-family: var(--font-display, inherit); font-size: 26px; text-align: center; font-variant-numeric: tabular-nums;
+            padding: 4px 0; background: var(--field); box-shadow: var(--bevel-field); }
+.tmf-track { height: 10px; background: var(--field); box-shadow: var(--bevel-field); }
+.tmf-fill { height: 100%; width: 0; background: var(--accent); }
+.tmf-actions { display: flex; gap: 6px; }
+.tmf-actions button { flex: 1; padding: 3px 8px; font-size: 13px; }
+.tmf.tm-paused .tmf-time { opacity: 0.6; }
+.tmf.tmf-ringing .tmf-bar { animation: tmf-ring 0.6s steps(2) infinite; }
+@keyframes tmf-ring { 0% { filter: none; } 50% { filter: invert(1); } }
+@media (prefers-reduced-motion: reduce) { .tmf.tmf-ringing .tmf-bar { animation: none; filter: invert(1); } }

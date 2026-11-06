@@ -29,7 +29,7 @@ const PALETTES = [['aurora', 'Aurora'], ['dawn', 'Dawn'], ['ocean', 'Ocean'],
 export const PRESETS = [['forest', 'Forest'], ['valley', 'Valley'], ['meadow', 'Meadow'],
   ['canyon', 'Canyon'], ['hills', 'Hills'], ['peaks', 'Peaks'], ['shore', 'Shore'], ['night', 'Night']];
 
-const DEFAULTS = { mode: 'pattern', pattern: 'teal', crt: true, scope: 'all', palette: 'aurora', speed: 'normal',
+const DEFAULTS = { imageOpacity: 1, mode: 'pattern', pattern: 'teal', crt: true, scope: 'all', palette: 'aurora', speed: 'normal',
   colors: ['#c7d7fe', '#fbcfe8', '#bbf7d0'], image: 'preset:peaks' };
 
 let prefs = { ...DEFAULTS, colors: [...DEFAULTS.colors] };
@@ -48,6 +48,10 @@ function load() {
   if (has(PALETTES, raw.palette)) prefs.palette = raw.palette;
   if (has(SPEEDS, raw.speed)) prefs.speed = raw.speed;
   if (Array.isArray(raw.colors) && raw.colors.length === 3 && raw.colors.every(c => HEX.test(c))) prefs.colors = raw.colors;
+  // How strong the image is: 10% to 100%. Anything else keeps the default.
+  if (typeof raw.imageOpacity === 'number' && Number.isFinite(raw.imageOpacity) && raw.imageOpacity >= 0.1 && raw.imageOpacity <= 1) {
+    prefs.imageOpacity = Math.round(raw.imageOpacity * 100) / 100;
+  }
   if (raw.image === 'custom' || (typeof raw.image === 'string' && has(PRESETS, raw.image.replace(/^preset:/, '')))) prefs.image = raw.image;
   // A store from before presets existed had only a custom image.
   if (raw.mode === 'image' && raw.image === undefined) prefs.image = 'custom';
@@ -84,6 +88,7 @@ function apply() {
     if (prefs.palette === 'custom') body.style.setProperty(v, prefs.colors[i]);
     else body.style.removeProperty(v);
   }
+  body.style.setProperty('--bd-image-opacity', String(prefs.imageOpacity));
   const layer = document.getElementById('bd-image');
   if (layer) layer.style.backgroundImage = url ? 'url("' + url + '")' : '';
 }
@@ -114,6 +119,8 @@ export function initBackdropSettings() {
     presets: document.getElementById('set-bg-presets'),
     file: document.getElementById('set-bg-file'),
     clear: document.getElementById('set-bg-clear'),
+    opacity: document.getElementById('set-bg-opacity'),
+    opacityNum: document.getElementById('set-bg-opacity-num'),
     hint: document.getElementById('set-bg-image-hint'),
   };
   if (!els.mode) return;
@@ -123,6 +130,17 @@ export function initBackdropSettings() {
     els.file.value = '';
     if (f) useFile(f);
   });
+  // Live while dragging (apply only), saved when released.
+  if (els.opacity) {
+    els.opacity.addEventListener('input', () => {
+      const v = Number(els.opacity.value) / 100;
+      if (!(v >= 0.1 && v <= 1)) return;
+      prefs.imageOpacity = v;
+      els.opacityNum.textContent = Math.round(v * 100) + '%';
+      apply();
+    });
+    els.opacity.addEventListener('change', () => { save(); });
+  }
   // Forgets the uploaded image; if it was in use, falls back to the default preset.
   els.clear.addEventListener('click', () => {
     try { localStorage.removeItem(IMAGE_KEY); } catch { /* ignore */ }
@@ -187,6 +205,10 @@ function render() {
   const own = customImage();
   els.presets.appendChild(tile(own ? 'Your image' : 'Upload…', 'custom', own));
   els.clear.hidden = !own;
+  if (els.opacity) {
+    els.opacity.value = String(Math.round(prefs.imageOpacity * 100));
+    els.opacityNum.textContent = Math.round(prefs.imageOpacity * 100) + '%';
+  }
 }
 
 function tile(label, value, src) {

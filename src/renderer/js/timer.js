@@ -43,6 +43,11 @@ function clean(raw) {
   if (typeof alarm !== 'boolean' || typeof banner !== 'boolean') return null;
   if (!STATUSES.includes(status)) return null;
   const t = { id, label, ms, alarm, notify: banner, status };
+  // Where its floating window is (v2). Anything that does not look right is dropped.
+  const fl = raw.float;
+  if (fl && typeof fl === 'object' && typeof fl.open === 'boolean' && Number.isFinite(fl.x) && Number.isFinite(fl.y)) {
+    t.float = { open: fl.open, x: Math.round(fl.x), y: Math.round(fl.y), min: fl.min === true };
+  }
   if (status === 'running') {
     if (!Number.isFinite(endsAt)) return null;
     t.endsAt = endsAt;
@@ -66,7 +71,7 @@ function load() {
 }
 
 function save() {
-  try { localStorage.setItem(KEY, JSON.stringify({ v: 1, timers })); } catch { /* not fatal */ }
+  try { localStorage.setItem(KEY, JSON.stringify({ v: 2, timers })); } catch { /* not fatal */ }
 }
 
 function newId() {
@@ -106,6 +111,41 @@ function lengthText(ms) {
 }
 
 const STATE_TEXT = { idle: 'Ready', running: 'Running', paused: 'Paused', done: "Time's up" };
+
+// What the sidebar's "Currently doing" card and the floating timers need. They
+// get the live objects, so they must treat them as read-only except through the
+// actions (start, pause, reset), which redraw and save.
+export const timerApi = {
+  list: () => timers,
+  find, start, pause, reset,
+  remaining, clock, lengthText,
+  isRinging: (id) => ringing.has(id),
+  // Saves a change that does not need the page redrawn (a floating window moved).
+  persist: () => save(),
+  // Saves and redraws (a floating window opened or closed).
+  changed,
+};
+
+const tickHooks = new Set();
+// Called on every tick while a timer runs. Returns a function that stops it.
+export function onTimerTick(fn) { tickHooks.add(fn); return () => tickHooks.delete(fn); }
+
+// The timer the card shows: the one that rings next, or else the first paused.
+export function nextTimer(now = Date.now()) {
+  const running = timers.filter(t => t.status === 'running');
+  if (running.length) {
+    const n = running.reduce((a, b) => (a.endsAt <= b.endsAt ? a : b));
+    return { text: clock(remaining(n, now), n.ms), paused: false, label: n.label };
+  }
+  const paused = timers.find(t => t.status === 'paused');
+  if (paused) return { text: clock(paused.left, paused.ms), paused: true, label: paused.label };
+  return null;
+}
+
+// The timers, for the global search: name and length, nothing that can be changed.
+export function timerList() {
+  return timers.map(t => ({ id: t.id, label: t.label, length: lengthText(t.ms) }));
+}
 
 // The status row and the sidebar badge both read this.
 export function timerSummary() {
@@ -250,6 +290,7 @@ function tick() {
   } else {
     els.badge.hidden = true;
   }
+  for (const fn of tickHooks) fn(now);
 }
 
 function syncTicker() {
@@ -354,6 +395,8 @@ function card(t) {
   const resetBtn = button('tm-reset', 'reload', '', () => reset(t), 'Reset');
   resetBtn.disabled = t.status === 'idle';
   controls.appendChild(resetBtn);
+  const pop = button('tm-pop', 'drag-and-drop', '', () => document.dispatchEvent(new CustomEvent('ethos:timer-popout', { detail: { id: t.id } })), 'Pop out into a floating window');
+  controls.appendChild(pop);
   const edit = button('tm-edit', 'edit', '', () => openForm(t), 'Edit');
   edit.disabled = t.status === 'running';
   controls.appendChild(edit);

@@ -15,6 +15,19 @@ const BOOT_LINES = [
 
 const E_IN = 750;
 
+// Centre the e's visible ink (not its text box) on the ring's centre. The svg
+// draws the mark at 10x, so the glyph sits at x=130, baseline y=200. The
+// shut-down outro (outro.js) uses the same placement.
+export function placeE(svgEl) {
+  const ctx = document.createElement('canvas').getContext('2d');
+  ctx.font = 'bold 220px Helvetica, Arial, sans-serif';
+  const m = ctx.measureText('e');
+  const inkX = 130 + (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
+  const inkY = 200 + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
+  svgEl.style.left = 'calc(50% - ' + inkX + 'px)';
+  svgEl.style.top = 'calc(50% - ' + inkY + 'px)';
+}
+
 export function playIntro() {
   const intro = document.getElementById('intro');
   const boot = document.getElementById('intro-boot');
@@ -57,15 +70,7 @@ export function playIntro() {
     });
   });
 
-  // Centre the e's visible ink (not its text box) on the ring's centre.
-  // The intro svg draws the mark at 10x, so the glyph sits at x=130, baseline y=200.
-  const ctx = document.createElement('canvas').getContext('2d');
-  ctx.font = 'bold 220px Helvetica, Arial, sans-serif';
-  const m = ctx.measureText('e');
-  const inkX = 130 + (m.actualBoundingBoxRight - m.actualBoundingBoxLeft) / 2;
-  const inkY = 200 + (m.actualBoundingBoxDescent - m.actualBoundingBoxAscent) / 2;
-  introE.style.left = 'calc(50% - ' + inkX + 'px)';
-  introE.style.top = 'calc(50% - ' + inkY + 'px)';
+  placeE(introE);
 
   // One class swaps the boot text for the e in the same frame, and starts the ring.
   later(E_IN, () => intro.classList.add('e-in'));

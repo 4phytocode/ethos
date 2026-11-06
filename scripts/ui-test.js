@@ -203,7 +203,7 @@ async function run() {
     await until(`[...document.querySelectorAll('#nt-links-out .nt-link-open')].map(n => n.textContent).join() === 'Beta'`));
   check('the picker closes after a pick', await js(`document.getElementById('nt-picker').hidden`));
   // An autosave redraws the chips; one already shown must hold still.
-  await js(`(() => { const b = document.getElementById('nt-body'); b.value = 'See Beta.'; b.dispatchEvent(new Event('input')); })()`);
+  await js(`(() => { const b = document.getElementById('nt-body'); b.textContent = 'See Beta.'; b.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: '.' })); })()`);
   check('an autosave does not replay the chip animation',
     await until(`document.querySelector('#nt-links-out .nt-link-chip').classList.contains('settled')`));
   await wait(400);
@@ -383,21 +383,29 @@ async function run() {
   check('an untouched new note is rubbed out', await until(`!document.querySelector('.dn-win') && document.querySelectorAll('#dn-rail-day .dn-item').length === 1`));
 
   console.log('\nnote tables');
-  check('a note opens with a table button', await newNote('Revision') && await js(`!!document.getElementById('nt-add-table')`));
-  await js(`(() => { const b = document.getElementById('nt-body'); b.value = 'Intro\\n/tracker'; b.focus(); b.setSelectionRange(b.value.length, b.value.length);
-    b.dispatchEvent(new Event('input')); b.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })); })()`);
+  check('a note opens with a table button', await newNote('Revision') && await js(`!!document.querySelector('.ed-toolbar [aria-label="Insert a table"]')`));
+  // Type "Intro", press Enter, then "/tracker" and Enter: the way a person would.
+  const typeIn = (text) => js(`(() => { const b = document.activeElement.closest('.eb-text') || document.getElementById('nt-body'); b.focus();
+    b.textContent = ${JSON.stringify(text)}; const s = getSelection(); s.collapse(b.firstChild, b.firstChild ? b.firstChild.length : 0);
+    b.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: 'x' })); })()`);
+  const pressEnter = () => js(`document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))`);
+  await js(`document.getElementById('nt-body').focus()`);
+  await typeIn('Intro');
+  await pressEnter();
+  await typeIn('/tracker');
+  await pressEnter();
   check('/tracker inserts a progress tracker', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 1 && document.querySelectorAll('#nt-blocks .nt-th').length === 4`));
   await js(`(() => { const c = document.querySelector('.nt-td.nt-type-text input'); c.value = 'Algebra'; c.dispatchEvent(new Event('input'));
     document.querySelector('.nt-td.nt-type-check .tick').click(); })()`);
   check('ticking a row updates the summary and progress', await until(`document.querySelector('.nt-table-pct')?.textContent === '33%'`));
   await wait(900);
-  const saved = await js(`import('./js/state.js').then(s => { const p = s.pages().find(p => p.title === 'Revision'); return p && { c: p.content, t: p.tables.length, cell: p.tables[0] && p.tables[0].rows[0].cells }; })`);
-  check('the table is saved in the page', saved && saved.t === 1 && /^Intro\n\{\{table:[a-z0-9]+\}\}$/.test(saved.c) && Object.values(saved.cell).includes('Algebra'), JSON.stringify(saved));
+  const saved = await js(`import('./js/state.js').then(s => { const p = s.pages().find(p => p.title === 'Revision'); return p && { c: p.blocks.map(b => b.type + (b.spans ? ':' + b.spans.map(s => s.t).join('') : '')).join('|'), t: p.tables.length, cell: p.tables[0] && p.tables[0].rows[0].cells }; })`);
+  check('the table is saved in the page', saved && saved.t === 1 && saved.c === 'p:Intro|table|p:' && Object.values(saved.cell).includes('Algebra'), JSON.stringify(saved));
   await shot('note-table.png');
-  await js(`document.getElementById('nt-add-table').click()`);
-  check('+ Table opens its menu and keeps it open', await until(`!!document.querySelector('.ctx-menu .menu-item')`));
+  await js(`document.querySelector('.ed-toolbar [aria-label="Insert a table"]').click()`);
+  check('the Table button opens its menu and keeps it open', await until(`!!document.querySelector('.ctx-menu .menu-item')`));
   await js(`document.querySelector('.ctx-menu .menu-item').click()`);
-  check('picking from the + Table menu adds a table', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 2`));
+  check('picking from the Table menu adds a table', await until(`document.querySelectorAll('#nt-blocks .nt-table').length === 2`));
 
   console.log('\nnotes tools');
   await js(`document.getElementById('nt-pin').click()`);
@@ -412,11 +420,13 @@ async function run() {
   check('search finds text inside tables', await until(`[...document.querySelectorAll('#nt-recent .nt-card-title')].map(n => n.textContent).join() === 'Revision'`));
   await js(`(() => { const s = document.getElementById('nt-search'); s.value = ''; s.dispatchEvent(new Event('input')); })()`);
 
+  await require('./ui-v11')({ win, js, until, check, wait, shot });
+
   console.log('\nconsole');
   check('no renderer errors', errors.length === 0, errors.join(' | '));
 }
 
-app.whenReady().then(() => run().catch(err => { console.error(err); results.push({ ok: false }); }).finally(() => {
+app.whenReady().then(() => run().catch(err => { console.error(err); console.log('renderer errors:', errors.join(' | ')); results.push({ ok: false }); }).finally(() => {
   const failed = results.filter(r => !r.ok).length;
   console.log('\n' + (results.length - failed) + ' passed, ' + failed + ' failed');
   console.log('screenshots: ' + tmp);

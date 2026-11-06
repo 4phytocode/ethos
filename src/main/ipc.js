@@ -17,7 +17,7 @@ const { EDITION } = require('./edition');
 //
 // `timers` holds the Timer page's deadlines (timers.js). A page that loads arms
 // its running timers again, so the old set is forgotten first.
-function register(store, { onRendererReady, timers } = {}) {
+function register(store, { onRendererReady, timers, vault, shutdown } = {}) {
   const handlers = {
     // Full state, for the renderer's cache on startup.
     'state:load': () => {
@@ -51,6 +51,7 @@ function register(store, { onRendererReady, timers } = {}) {
 
     'folders:create': (input) => ({ folder: store.createFolder(input), ...store.snapshot() }),
     'folders:rename': (folderId, input) => ({ folder: store.renameFolder(folderId, input), ...store.snapshot() }),
+    'folders:update': (folderId, patch) => ({ folder: store.updateFolder(folderId, patch), ...store.snapshot() }),
     'folders:delete': (folderId) => ({ deleted: store.deleteFolder(folderId), ...store.snapshot() }),
 
     'pages:create': (input) => ({ page: store.createPage(input), ...store.snapshot() }),
@@ -62,6 +63,19 @@ function register(store, { onRendererReady, timers } = {}) {
     'daynotes:create': (input) => ({ daynote: store.createDayNote(input), ...store.snapshot() }),
     'daynotes:update': (noteId, patch) => ({ daynote: store.updateDayNote(noteId, patch), ...store.snapshot() }),
     'daynotes:delete': (noteId) => ({ deleted: store.deleteDayNote(noteId), ...store.snapshot() }),
+
+    // An image from the page. The vault checks what the bytes really are.
+    'assets:import': async (bytes) => {
+      if (!(bytes instanceof Uint8Array)) throw new ValidationError('bytes must be binary data');
+      if (!vault) throw new ValidationError('images are not available');
+      try { return { asset: await vault.writeAsset(bytes) }; } catch (err) {
+        throw new ValidationError(err.message);
+      }
+    },
+
+    // The command bar's shut-down: leave for real, never to the tray. The reply
+    // goes out first, then the quit (before-quit still flushes the store).
+    'app:shutdown': () => { if (shutdown) setImmediate(shutdown); return {}; },
 
     'timers:arm': (timerId, input) => { timers.arm(timerId, input); return {}; },
     'timers:disarm': (timerId) => { timers.disarm(timerId); return {}; },

@@ -23,6 +23,11 @@
 <link rel="stylesheet" href="styles/backdrop.css">
 <link rel="stylesheet" href="styles/home.css">
 <link rel="stylesheet" href="styles/prompts.css">
+<link rel="stylesheet" href="styles/search.css">
+<link rel="stylesheet" href="styles/editor.css">
+<link rel="stylesheet" href="styles/commandbar.css">
+<link rel="stylesheet" href="styles/nowcard.css">
+<link rel="stylesheet" href="styles/timer-float.css">
 </head>
 <body>
   <!-- Moving background, or the user's image; see js/backdrop.js. Behind everything, never clickable. -->
@@ -54,6 +59,24 @@
     </svg>
   </div>
 
+  <!-- The shut-down outro (js/outro.js): the intro's pieces, played backwards. Cloned when needed. -->
+  <template id="outro-tpl">
+    <div id="outro" aria-hidden="true">
+      <div id="outro-boot"></div>
+      <svg class="ring back" viewBox="0 0 460 460">
+        <g transform="rotate(-18 230 230)"><path pathLength="1" d="M20 230 A210 58 0 0 1 440 230 A210 58 0 0 1 20 230"/></g>
+      </svg>
+      <svg id="outro-e" viewBox="0 0 40 24" fill="#ffffff">
+        <text x="13" y="20" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="700">e</text>
+      </svg>
+      <svg class="ring front" viewBox="0 0 460 460">
+        <defs><clipPath id="ring-front-clip-o"><rect x="0" y="230" width="460" height="230"/></clipPath></defs>
+        <g transform="rotate(-18 230 230)"><path pathLength="1" clip-path="url(#ring-front-clip-o)" d="M20 230 A210 58 0 0 1 440 230 A210 58 0 0 1 20 230"/></g>
+      </svg>
+      <div id="outro-dot"></div>
+    </div>
+  </template>
+
   <!-- Brand -->
   <div class="brand intro-hidden" id="brand-home">
     <svg id="brand-logo" viewBox="0 0 40 24" width="40" height="24" aria-hidden="true">
@@ -62,10 +85,14 @@
     </svg>
   </div>
 
+  <!-- Floating timers (js/timer-float.js) -->
+  <div id="tm-floats" aria-live="off"></div>
+
   <!-- Right sidebar: Notion-style, full names, hideable (Ctrl+\) -->
   <aside class="sidebar" id="sidebar" aria-label="Sections">
     <div class="sb-top">
       <span class="sb-name">Workspace</span>
+      <button class="sb-icon-btn" id="sb-search" type="button" title="Search (Tab)" aria-label="Search" data-icon="search" data-icon-size="16"></button>
       <button class="sb-icon-btn" id="sb-hide" type="button" title="Hide sidebar (Ctrl+\)" aria-label="Hide sidebar">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l6 6-6 6M13 6l6 6-6 6"/></svg>
       </button>
@@ -120,6 +147,17 @@
 
     <div class="sb-foot">
     <button class="sidebar-btn" data-view="settings-page" type="button"><span class="sidebar-glyph" aria-hidden="true" data-icon="sliders" data-icon-size="16"></span><span>Settings</span></button>
+    <!-- Currently doing: coffee cup, the next timer, the task you are on (js/nowcard.js) -->
+    <button class="sb-now" id="sb-now" type="button" aria-label="Currently doing">
+      <span class="now-panel">
+        <span class="now-cup" aria-hidden="true"></span>
+        <span class="now-text">
+          <span class="now-time" id="now-time">--:--</span><span class="now-pause" id="now-pause" hidden>paused</span>
+          <span class="now-task none" id="now-task">No task</span>
+          <span class="now-more" id="now-more"></span>
+        </span>
+      </span>
+    </button>
     </div>
   </aside>
   <!-- Shown only while the sidebar is hidden -->
@@ -453,7 +491,6 @@
       <div class="nt-bar">
         <button class="nt-crumb" id="nt-crumb" type="button" title="All notes"></button>
         <div class="nt-bar-tools">
-          <button class="nt-chip" id="nt-add-table" type="button" title="Insert a table at the cursor (or type /table)">+ Table</button>
           <select class="nt-move" id="nt-move" aria-label="Folder"></select>
           <button class="nt-chip" id="nt-pin" type="button" aria-pressed="false">Pin</button>
           <button class="nt-chip" id="nt-temp" type="button" aria-pressed="false">Mark temporary</button>
@@ -774,6 +811,28 @@
         <div class="set-tiles" id="set-bg-presets"></div>
         <button class="set-bg-remove" id="set-bg-clear" type="button" hidden>Remove uploaded image</button>
         <input id="set-bg-file" type="file" accept="image/png,image/jpeg,image/webp" hidden/>
+      </div>
+
+      <div class="set-row set-bg-imagerow">
+        <div class="set-label">
+          <span>Image opacity</span>
+          <span class="set-hint">Lower fades the picture into the desktop colour.</span>
+        </div>
+        <input type="range" id="set-bg-opacity" min="10" max="100" step="5" value="100" aria-label="Background image opacity">
+        <span id="set-bg-opacity-num" class="set-hint">100%</span>
+      </div>
+    </section>
+
+    <section class="set-section">
+      <h2>Keyboard</h2>
+      <p class="set-section-sub">Quick keys that work when you are not typing.</p>
+
+      <div class="set-row">
+        <div class="set-label">
+          <span>Tab opens search</span>
+          <span class="set-hint">Shift+Tab still moves focus backwards. Turn this off if you navigate with Tab.</span>
+        </div>
+        <div class="set-seg-group" id="set-tab-search"></div>
       </div>
     </section>
 

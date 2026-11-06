@@ -12,7 +12,10 @@ const path = require('path');
 const { Vault } = require('../src/main/vault');
 const { Store } = require('../src/main/store');
 const { Timers, MAX_TIMERS } = require('../src/main/timers');
-const { ValidationError, TAG_COLORS, SCHEMA_VERSION, MAX_DONE_DATES } = require('../src/main/schema');
+const { ValidationError, TAG_COLORS, SCHEMA_VERSION, MAX_DONE_DATES, blocksToText } = require('../src/main/schema');
+
+// One paragraph block, the way the renderer sends it.
+const para = (id, text) => ({ id, type: 'p', indent: 0, align: 'left', spans: text ? [{ t: text }] : [] });
 
 let passed = 0;
 const failures = [];
@@ -903,7 +906,7 @@ async function main() {
     const { store } = await freshStore(root);
     const f = store.createFolder({ name: 'Ideas' });
     const p = store.createPage({ folderId: f.id });
-    store.updatePage(p.id, { title: 'First', content: 'Body' });
+    store.updatePage(p.id, { title: 'First', blocks: [para('b1', 'Body')] });
     store.createPage({ temporary: true });
     await store.flush();
     const after = await reopen(root);
@@ -1142,7 +1145,7 @@ async function main() {
       ],
       rows: [{ id: 'r1', cells: { c1: 'Algebra', c2: 140, c3: 'Nope', c4: true, zz: 1 } }],
     };
-    store.updatePage(page.id, { tables: [table], content: '{{table:tab1}}' }, NOW + 1);
+    store.updatePage(page.id, { tables: [table] }, NOW + 1);
     const cells = store.pages[0].tables[0].rows[0].cells;
     assert.deepStrictEqual(cells, { c1: 'Algebra', c2: 100, c4: true }, 'clamped, unknown option and column dropped');
     const before = store.pages[0].updatedAt;
@@ -1161,7 +1164,7 @@ async function main() {
     assert.throws(() => after.updatePage(page.id, { tables: [{ ...table, id: '../x' }] }), ValidationError);
   });
 
-  await test('a v7 vault opens at v8 with no goals and plain pages', async (root) => {
+  await test('a v7 vault opens at the current version with no goals and plain pages', async (root) => {
     const { store, vault } = await freshStore(root);
     store.createPage({}, NOW);
     await store.flush();
@@ -1172,7 +1175,268 @@ async function main() {
     assert.deepStrictEqual(after.pages[0].tables, []);
     assert.strictEqual(after.pages[0].pinned, false);
     const meta = JSON.parse(await fs.readFile(vault.metaFile, 'utf8'));
-    assert.strictEqual(meta.schemaVersion, 8);
+    assert.strictEqual(meta.schemaVersion, SCHEMA_VERSION);
+  });
+
+  console.log('\nversion 9: descriptions, folders, blocks, tables, images');
+
+  await test('a to-do description round-trips, is capped, and does not re-plan', async (root) => {
+    const { store } = await freshStore(root);
+    const t = store.createTodo({ title: 'Essay', kind: 'task', date: '2026-11-04', minutes: 30, description: 'Intro and two paragraphs.  ' }, NOW);
+    assert.strictEqual(t.description, 'Intro and two paragraphs.', 'trailing space is dropped');
+    assert.throws(() => store.createTodo({ title: 'x', kind: 'task', date: '2026-11-04', description: 'x'.repeat(2001) }, NOW), ValidationError);
+    assert.throws(() => store.updateTodo(t.id, { description: 'x'.repeat(2001) }, NOW), ValidationError);
+    store.todos[0].notified = true;
+    const due = store.todos[0].dueAt;
+    store.updateTodo(t.id, { description: 'Changed' }, NOW + 1000);
+    assert.strictEqual(store.todos[0].description, 'Changed');
+    assert.strictEqual(store.todos[0].notified, true, 'a description is not a different plan');
+    assert.strictEqual(store.todos[0].dueAt, due);
+    await store.flush();
+    const after = await reopen(root);
+    assert.strictEqual(after.todos[0].description, 'Changed');
+    assert.strictEqual(after.createTodo({ title: 'B', kind: 'task', date: '2026-11-04' }, NOW).description, '');
+  });
+
+  await test('folders nest, refuse loops and depth, and re-parent on delete', async (root) => {
+    const { store } = await freshStore(root);
+    const a = store.createFolder({ name: 'A' }, NOW);
+    const b = store.createFolder({ name: 'B', parentId: a.id }, NOW);
+    const c = store.createFolder({ name: 'C', parentId: b.id }, NOW);
+    assert.strictEqual(b.parentId, a.id);
+    assert.throws(() => store.updateFolder(a.id, { parentId: c.id }), ValidationError, 'A inside its own descendant');
+    assert.throws(() => store.updateFolder(a.id, { parentId: a.id }), ValidationError, 'inside itself');
+    assert.throws(() => store.createFolder({ name: 'X', parentId: 'f_00000000-0000-4000-8000-000000000000' }), ValidationError);
+    // C is at level 3; add three more levels to reach 6, then one more must fail.
+    let last = c;
+    for (const n of ['D', 'E', 'F']) last = store.createFolder({ name: n, parentId: last.id }, NOW);
+    assert.throws(() => store.createFolder({ name: 'G', parentId: last.id }), ValidationError, 'level 7');
+    const other = store.createFolder({ name: 'Other' }, NOW);
+    assert.throws(() => store.updateFolder(a.id, { parentId: other.id }), ValidationError, 'moving the subtree would reach level 7');
+    const p = store.createPage({ folderId: b.id });
+    store.deleteFolder(b.id, NOW + 5);
+    assert.strictEqual(store.folders.find(x => x.id === c.id).parentId, a.id, 'children go up to the parent');
+    assert.strictEqual(store.pages.find(x => x.id === p.id).folderId, a.id, 'pages go up to the parent');
+    store.deleteFolder(a.id, NOW + 6);
+    assert.strictEqual(store.folders.find(x => x.id === c.id).parentId, null);
+    assert.strictEqual(store.pages.find(x => x.id === p.id).folderId, null);
+  });
+
+  await test('folder colour and tags: palette only, live tags only, stripped when a tag goes', async (root) => {
+    const { store } = await freshStore(root);
+    const f = store.createFolder({ name: 'Uni' }, NOW);
+    const tag = store.createTag({ name: 'exam', color: TAG_COLORS[0] });
+    store.updateFolder(f.id, { color: TAG_COLORS[2], tagIds: [tag.id] }, NOW + 1);
+    assert.strictEqual(store.folders[0].color, TAG_COLORS[2]);
+    assert.throws(() => store.updateFolder(f.id, { color: '#123456' }), ValidationError);
+    assert.throws(() => store.updateFolder(f.id, { color: 'red' }), ValidationError);
+    assert.throws(() => store.updateFolder(f.id, { tagIds: ['t_00000000-0000-4000-8000-000000000000'] }), ValidationError, 'unknown tag');
+    assert.throws(() => store.updateFolder(f.id, {}), ValidationError, 'empty patch');
+    await store.flush();
+    const after = await reopen(root);
+    assert.deepStrictEqual(after.folders[0].tagIds, [tag.id]);
+    assert.strictEqual(after.snapshot().folders[0].tagIds !== after.folders[0].tagIds, true, 'the snapshot is a copy');
+    after.deleteTag(tag.id);
+    assert.deepStrictEqual(after.folders[0].tagIds, [], 'deleting a tag strips it from folders');
+    after.updateFolder(f.id, { color: null }, NOW + 2);
+    assert.strictEqual(after.folders[0].color, null);
+  });
+
+  await test('a dangling or looping folder parent is repaired on load', async (root) => {
+    const { store, vault } = await freshStore(root);
+    const a = store.createFolder({ name: 'A' }, NOW);
+    const b = store.createFolder({ name: 'B', parentId: a.id }, NOW);
+    await store.flush();
+    const file = vault.foldersFile;
+    const data = JSON.parse(await fs.readFile(file, 'utf8'));
+    data.folders.find(x => x.id === a.id).parentId = b.id;     // A in B in A
+    data.folders.push({ ...data.folders[0], id: 'f_11111111-1111-4111-8111-111111111111', name: 'Orphan', parentId: 'f_22222222-2222-4222-8222-222222222222' });
+    await fs.writeFile(file, JSON.stringify(data), 'utf8');
+    const quiet = console.error;
+    console.error = () => {};
+    let after;
+    try { after = await reopen(root); } finally { console.error = quiet; }
+    assert.strictEqual(after.folders.length, 3, 'nothing is thrown away');
+    assert.strictEqual(after.folders.find(x => x.name === 'Orphan').parentId, null);
+    const parents = after.folders.filter(x => x.name !== 'Orphan').map(x => x.parentId);
+    assert.ok(parents.includes(null), 'the loop is broken');
+  });
+
+  await test('a v8 page becomes blocks, tables included, and keeps its text', async (root) => {
+    const { store, vault } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    store.updatePage(page.id, { tables: [{ id: 'tab1', title: 'Scores', columns: [{ id: 'c1', name: 'Who', type: 'text' }], rows: [{ id: 'r1', cells: { c1: 'Ann' } }] },
+      { id: 'tab2', title: 'Two', columns: [{ id: 'c1', name: 'x', type: 'text' }], rows: [] }] }, NOW + 1);
+    await store.flush();
+    // Rewrite the file as a version 8 page: content with a marker line, no blocks.
+    const file = vault.pageFile(page.id);
+    const raw = JSON.parse(await fs.readFile(file, 'utf8'));
+    delete raw.blocks;
+    raw.content = 'Heading line\n{{table:tab1}}\nafter the table';
+    await fs.writeFile(file, JSON.stringify(raw), 'utf8');
+    await fs.writeFile(vault.metaFile, JSON.stringify({ schemaVersion: 8 }), 'utf8');
+    const after = await reopen(root);
+    const types = after.pages[0].blocks.map(b => b.type);
+    assert.deepStrictEqual(types, ['p', 'table', 'p', 'table'], 'marker line became a table block; the unmarked table went last');
+    assert.strictEqual(after.pages[0].blocks[0].spans[0].t, 'Heading line');
+    assert.ok(after.pages[0].content.includes('Heading line') && after.pages[0].content.includes('Ann'), 'derived text has the lines and the table cells');
+    assert.strictEqual(JSON.parse(await fs.readFile(vault.metaFile, 'utf8')).schemaVersion, SCHEMA_VERSION);
+    // A page with nothing in it still has one block.
+    const empty = after.createPage({}, NOW);
+    assert.strictEqual(empty.blocks.length, 1);
+    assert.strictEqual(empty.blocks[0].type, 'p');
+  });
+
+  await test('every block type round-trips; the derived text has no markup', async (root) => {
+    const { store } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    const asset = 'a_11111111-1111-4111-8111-111111111111.png';
+    const blocks = [
+      { id: 'b01', type: 'h1', indent: 0, align: 'center', spans: [{ t: 'Title' }] },
+      { id: 'b02', type: 'p', indent: 0, align: 'left', spans: [{ t: 'bold ', m: ['b'] }, { t: 'and link', m: ['i', 'u'], href: 'https://example.com/a', c: TAG_COLORS[1], bg: TAG_COLORS[3] }, { t: '', fn: 'A footnote.' }] },
+      { id: 'b03', type: 'bullet', indent: 2, spans: [{ t: 'point' }] },
+      { id: 'b04', type: 'todo', indent: 0, checked: true, spans: [{ t: 'task' }] },
+      { id: 'b05', type: 'toggle', indent: 0, open: true, spans: [{ t: 'more' }] },
+      { id: 'b06', type: 'quote', indent: 0, spans: [{ t: 'quoted' }] },
+      { id: 'b07', type: 'caption', indent: 0, spans: [{ t: 'small' }] },
+      { id: 'b08', type: 'divider', indent: 0 },
+      { id: 'b09', type: 'code', indent: 0, lang: 'javascript', text: 'const x = 1;', wrap: true },
+      { id: 'b10', type: 'image', indent: 0, asset, width: 50, align: 'left', caption: [{ t: 'a picture' }] },
+      { id: 'b11', type: 'bookmark', indent: 0, url: 'https://example.com', title: 'Example' },
+    ];
+    store.updatePage(page.id, { blocks }, NOW + 1);
+    await store.flush();
+    const after = await reopen(root);
+    const got = after.pages[0].blocks;
+    assert.deepStrictEqual(got.map(b => b.type), blocks.map(b => b.type));
+    assert.deepStrictEqual(got[1].spans[1].m, ['i', 'u']);
+    assert.strictEqual(got[1].spans[2].fn, 'A footnote.');
+    assert.strictEqual(got[9].width, 50);
+    const text = after.pages[0].content;
+    assert.ok(text.includes('Title') && text.includes('const x = 1;') && text.includes('a picture') && text.includes('Example https://example.com'));
+    assert.ok(text.includes('[1] A footnote.'), 'footnotes follow as numbered lines');
+    assert.ok(!text.includes('"t"') && !text.includes('spans'), 'no span JSON in the text');
+    assert.strictEqual(blocksToText([para('x', 'hello')], []), 'hello');
+  });
+
+  await test('bad blocks are refused over IPC and dropped when read off disk', async (root) => {
+    const { store, vault } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    const bad = (b) => assert.throws(() => store.updatePage(page.id, { blocks: [b] }), ValidationError);
+    bad({ id: 'a', type: 'p', spans: [{ t: 'x', href: 'javascript:alert(1)' }] });
+    bad({ id: 'a', type: 'p', spans: [{ t: 'x', href: 'data:text/html,hi' }] });
+    bad({ id: 'a', type: 'p', spans: [{ t: 'x', c: '#123456' }] });
+    bad({ id: 'a', type: 'p', spans: [{ t: 'x', m: ['blink'] }] });
+    bad({ id: 'a', type: 'scrawl' });
+    bad({ id: '../x', type: 'p', spans: [] });
+    bad({ id: 'a', type: 'image', asset: '../x.png' });
+    bad({ id: 'a', type: 'image', asset: 'a_11111111-1111-4111-8111-111111111111.svg' });
+    bad({ id: 'a', type: 'bookmark', url: 'file:///c:/x' });
+    bad({ id: 'a', type: 'code', lang: 'cobol', text: '' });
+    bad({ id: 'a', type: 'p', indent: 9, spans: [] });
+    bad({ id: 'a', type: 'table', table: 'nope' });
+    assert.throws(() => store.updatePage(page.id, { blocks: [para('a', 'x'), para('a', 'y')] }), ValidationError, 'duplicate ids');
+    assert.throws(() => store.updatePage(page.id, { content: 'raw text' }), ValidationError, 'content cannot be sent');
+    assert.throws(() => store.updatePage(page.id, { blocks: Array.from({ length: 5001 }, (_, i) => para('b' + i, '')) }), ValidationError, '5001 blocks');
+    // Off disk, one bad block costs only itself.
+    await store.flush();
+    const file = vault.pageFile(page.id);
+    const raw = JSON.parse(await fs.readFile(file, 'utf8'));
+    raw.blocks = [para('ok1', 'kept'), { id: 'bad', type: 'p', spans: [{ t: 'x', href: 'javascript:1' }] }, { id: 'huh', type: 'unknown' }, para('ok1', 'dup id')];
+    await fs.writeFile(file, JSON.stringify(raw), 'utf8');
+    const quiet = console.error;
+    console.error = () => {};
+    let after;
+    try { after = await reopen(root); } finally { console.error = quiet; }
+    assert.strictEqual(after.pages.length, 1, 'the page still loads');
+    assert.deepStrictEqual(after.pages[0].blocks.map(b => b.spans[0].t), ['kept', 'dup id']);
+    assert.notStrictEqual(after.pages[0].blocks[0].id, after.pages[0].blocks[1].id, 'a duplicate id is given a new one');
+  });
+
+  await test('a table block must point at a table on the page, once', async (root) => {
+    const { store } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    const table = { id: 'tab1', title: 'T', columns: [{ id: 'c1', name: 'x', type: 'text' }], rows: [] };
+    store.updatePage(page.id, { tables: [table], blocks: [{ id: 'bt', type: 'table', table: 'tab1' }, para('bp', 'after')] }, NOW + 1);
+    assert.deepStrictEqual(store.pages[0].blocks.map(b => b.type), ['table', 'p']);
+    assert.throws(() => store.updatePage(page.id, { blocks: [{ id: 'bt', type: 'table', table: 'tab1' }, { id: 'bu', type: 'table', table: 'tab1' }] }), ValidationError, 'shown twice');
+    // A table with no block gets one at the end.
+    store.updatePage(page.id, { blocks: [para('bp', 'only text')] }, NOW + 2);
+    assert.deepStrictEqual(store.pages[0].blocks.map(b => b.type), ['p', 'table']);
+  });
+
+  await test('table columns: status, multi-select, url, sort and filter', async (root) => {
+    const { store } = await freshStore(root);
+    const page = store.createPage({}, NOW);
+    const table = {
+      id: 'tab1', title: 'Board',
+      columns: [
+        { id: 'c1', name: 'Task', type: 'text', width: 9000, calc: 'count' },
+        { id: 'c2', name: 'State', type: 'status', options: ['Not started', 'In progress', 'Done'] },
+        { id: 'c3', name: 'Tags', type: 'multiselect', options: ['a', 'b', 'c'] },
+        { id: 'c4', name: 'Link', type: 'url', hidden: true },
+        { id: 'c5', name: 'N', type: 'number' },
+      ],
+      rows: [
+        { id: 'r1', createdAt: NOW, cells: { c1: 'x', c2: 'Done', c3: ['a', 'zzz', 'a', 'c'], c4: 'https://example.com', c5: 3 } },
+        { id: 'r2', cells: { c2: 'Nope', c3: 'notalist', c4: 'javascript:alert(1)' } },
+      ],
+      sort: { col: 'c5', dir: 'desc' }, filter: { col: 'c1', op: 'contains', value: 'x' },
+    };
+    store.updatePage(page.id, { tables: [table] }, NOW + 1);
+    const t = store.pages[0].tables[0];
+    assert.deepStrictEqual(t.columns[1].groups, ['todo', 'doing', 'done'], 'status groups default by position');
+    assert.strictEqual(t.columns[0].width, 600, 'width is clamped');
+    assert.strictEqual(t.columns[0].calc, 'count');
+    assert.strictEqual(t.columns[3].hidden, true);
+    assert.deepStrictEqual(t.rows[0].cells.c3, ['a', 'c'], 'unknown and repeated options dropped');
+    assert.deepStrictEqual(t.rows[1].cells, {}, 'an unfit status, list and link are dropped');
+    assert.deepStrictEqual(t.sort, { col: 'c5', dir: 'desc' });
+    assert.strictEqual(t.rows[0].createdAt, NOW);
+    assert.strictEqual(t.showTitle, true);
+    assert.throws(() => store.updatePage(page.id, { tables: [{ ...table, columns: [{ ...table.columns[0], calc: 'median' }] }] }), ValidationError);
+    // A sort on a column that is gone is dropped, not an error.
+    store.updatePage(page.id, { tables: [{ ...table, columns: table.columns.slice(0, 4), sort: { col: 'c5', dir: 'asc' } }] }, NOW + 2);
+    assert.strictEqual(store.pages[0].tables[0].sort, null);
+    await store.flush();
+    const after = await reopen(root);
+    assert.deepStrictEqual(after.pages[0].tables[0].columns[1].options, ['Not started', 'In progress', 'Done']);
+  });
+
+  await test('images: type is read from the bytes, size is capped, names cannot build paths', async (root) => {
+    const { vault } = await freshStore(root);
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
+    const name = await vault.writeAsset(png);
+    assert.match(name, /^a_[0-9a-f-]{36}\.png$/);
+    assert.deepStrictEqual(await vault.readAsset(name), png);
+    const jpg = await vault.writeAsset(Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0]));
+    assert.ok(jpg.endsWith('.jpg'));
+    assert.ok((await vault.writeAsset(Buffer.from('GIF89a......'))).endsWith('.gif'));
+    assert.ok((await vault.writeAsset(Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(4), Buffer.from('WEBPVP8 ')]))).endsWith('.webp'));
+    await assert.rejects(() => vault.writeAsset(Buffer.from('just some text pretending to be a png')), /not a PNG/);
+    await assert.rejects(() => vault.writeAsset(Buffer.alloc(0)), /empty/);
+    await assert.rejects(() => vault.writeAsset(Buffer.concat([png, Buffer.alloc(10 * 1024 * 1024)])), /10 MB/);
+    assert.throws(() => vault.assetFile('../meta.json'), /refusing/);
+    assert.throws(() => vault.assetFile('a_11111111-1111-4111-8111-111111111111.svg'), /refusing/);
+    assert.throws(() => vault.assetFile('..\\x.png'), /refusing/);
+    assert.strictEqual(await vault.readAsset('a_11111111-1111-4111-8111-111111111111.png'), null, 'a missing file is null');
+  });
+
+  await test('the asset sweep removes old orphans and keeps used and fresh files', async (root) => {
+    const { vault, store } = await freshStore(root);
+    const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40)]);
+    const used = await vault.writeAsset(png);
+    const oldOrphan = await vault.writeAsset(png);
+    const freshOrphan = await vault.writeAsset(png);
+    const day = 24 * 3600 * 1000;
+    const old = new Date(Date.now() - 2 * day);
+    await fs.utimes(vault.assetFile(used), old, old);
+    await fs.utimes(vault.assetFile(oldOrphan), old, old);
+    const page = store.createPage({}, NOW);
+    store.updatePage(page.id, { blocks: [{ id: 'img1', type: 'image', asset: used }] }, NOW + 1);
+    assert.strictEqual(await store.sweepAssets(), 1);
+    const left = (await vault.listAssets()).map(a => a.name).sort();
+    assert.deepStrictEqual(left, [used, freshOrphan].sort());
   });
 
   console.log('\ntimers');

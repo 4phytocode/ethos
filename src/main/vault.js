@@ -7,6 +7,7 @@
 //   notes/<id>.json    one file per note
 //   folders.json       { folders: [...] }   Notes section folders
 //   pages/<id>.json    one file per Notes page
+//   assets/<name>      images used by pages (a_<uuid>.png|jpg|gif|webp)
 //
 // One file per note rather than a single blob: a torn or hand-edited file costs
 // one note instead of the whole journal, and a per-note record is the shape a
@@ -20,10 +21,22 @@
 
 const fs = require('fs/promises');
 const path = require('path');
+const crypto = require('crypto');
 const {
   parseNote, parseTag, parseEvent, parseTodo, parseHabit, parseMood, parseFolder, parsePage, parseGoal, parseDayNote,
-  migrate, SCHEMA_VERSION,
+  migrate, SCHEMA_VERSION, ASSET_NAME,
 } = require('./schema');
+
+const MAX_ASSET_BYTES = 10 * 1024 * 1024;
+
+// What an image file really is, from its first bytes, not its name.
+function sniffImage(b) {
+  if (b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'png';
+  if (b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'jpg';
+  if (b.length >= 6 && b.toString('latin1', 0, 4) === 'GIF8') return 'gif';
+  if (b.length >= 12 && b.toString('latin1', 0, 4) === 'RIFF' && b.toString('latin1', 8, 12) === 'WEBP') return 'webp';
+  return null;
+}
 
 class Vault {
   constructor(root) {
@@ -39,12 +52,14 @@ class Vault {
     this.goalsFile = path.join(root, 'goals.json');
     this.dayNotesFile = path.join(root, 'daynotes.json');
     this.pagesDir = path.join(root, 'pages');
+    this.assetsDir = path.join(root, 'assets');
     this.tmpDir = path.join(root, '.tmp');
   }
 
   async init() {
     await fs.mkdir(this.notesDir, { recursive: true });
     await fs.mkdir(this.pagesDir, { recursive: true });
+    await fs.mkdir(this.assetsDir, { recursive: true });
     await fs.mkdir(this.tmpDir, { recursive: true });
     // A previous run may have died between writing a temp file and renaming it.
     await this.#clearTmp();
@@ -257,6 +272,49 @@ class Vault {
 
   async deletePage(pageId) {
     await fs.rm(this.pageFile(pageId), { force: true });
+  }
+
+  // ─── Assets (images) ───
+
+  assetFile(name) {
+    // This builds a path, so the name is checked against our own pattern again.
+    if (typeof name !== 'string' || !ASSET_NAME.test(name)) throw new Error('refusing to build a path from ' + name);
+    return path.join(this.assetsDir, name);
+  }
+
+  // Store an image and return its name. The type is read from the bytes: a text
+  // file renamed .png is refused, and so is anything over 10 MB.
+  async writeAsset(bytes) {
+    const buf = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
+    if (buf.length === 0) throw new Error('that image is empty');
+    if (buf.length > MAX_ASSET_BYTES) throw new Error('images can be up to 10 MB');
+    const ext = sniffImage(buf);
+    if (!ext) throw new Error('that is not a PNG, JPEG, GIF or WebP image');
+    const name = 'a_' + crypto.randomUUID() + '.' + ext;
+    await this.#writeAtomic(this.assetFile(name), buf);
+    return name;
+  }
+
+  async readAsset(name) {
+    try { return await fs.readFile(this.assetFile(name)); } catch (err) {
+      if (err.code === 'ENOENT') return null;
+      throw err;
+    }
+  }
+
+  async listAssets() {
+    let names;
+    try { names = await fs.readdir(this.assetsDir); } catch { return []; }
+    const out = [];
+    for (const name of names) {
+      if (!ASSET_NAME.test(name)) continue;
+      try { out.push({ name, mtimeMs: (await fs.stat(path.join(this.assetsDir, name))).mtimeMs }); } catch { /* gone */ }
+    }
+    return out;
+  }
+
+  async deleteAsset(name) {
+    await fs.rm(this.assetFile(name), { force: true });
   }
 
   async saveFolders(folders) {

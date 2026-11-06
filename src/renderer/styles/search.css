@@ -1,0 +1,27 @@
+/* Global search (js/search.js) and the shared "found it" flash. */
+
+.fs-scrim { position: fixed; inset: 0; z-index: 310; display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 10vh; background: rgba(0, 0, 0, 0.35); }
+.fs-win { width: min(560px, calc(100vw - 32px)); }
+.fs-body { display: flex; flex-direction: column; gap: 8px; padding: 8px; color: var(--fg); }
+.fs-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.fs-chip { padding: 2px 8px; font-size: 12px; }
+.fs-chip[aria-pressed="true"] { box-shadow: var(--bevel-in); background: var(--field); font-weight: 600; }
+.fs-input { width: 100%; box-sizing: border-box; height: 34px; padding: 0 10px; font: inherit; font-size: 15px; }
+.fs-list { list-style: none; margin: 0; padding: 2px; max-height: 52vh; overflow-y: auto;
+           background: var(--field); box-shadow: var(--bevel-field); }
+.fs-group { padding: 6px 8px 2px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.fs-row { display: flex; align-items: center; gap: 8px; padding: 5px 8px; cursor: pointer; }
+.fs-row.active { background: var(--accent); color: var(--accent-fg); }
+.fs-ico { flex: none; display: inline-flex; }
+.fs-text { min-width: 0; display: flex; flex-direction: column; }
+.fs-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+.fs-title b { font-weight: 700; text-decoration: underline; }
+.fs-sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; opacity: 0.7; }
+.fs-empty { padding: 14px 10px; font-size: 13px; color: var(--muted); }
+.fs-hint { font-size: 11px; color: var(--muted); }
+
+/* A thing the search just took you to. */
+.flash { animation: fs-flash 1.4s steps(4) 1; }
+@keyframes fs-flash { 0%, 50% { background: var(--accent); color: var(--accent-fg); } 25%, 75%, 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { .flash { animation: none; outline: 2px solid var(--accent); } }
