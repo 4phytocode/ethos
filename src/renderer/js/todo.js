@@ -16,6 +16,7 @@ import * as state from './state.js';
 import { show, showCtx } from './views.js';
 import { notify } from './notifications.js';
 import { parseEntry, formatEntry } from './todo-parse.js';
+import { icon } from './icons.js';
 
 const timeFormat = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
 const headingFormat = new Intl.DateTimeFormat(undefined, {
@@ -121,6 +122,24 @@ export function plannedSpan(t) {
 export function openTodoDay(iso) {
   show('todo-page');
   if (els) goTo(iso);
+}
+
+// Shows a task on its own day and flashes it; `expand` opens its description.
+export function revealTodo(id, { expand = false } = {}) {
+  const t = state.todo(id);
+  if (!t) return;
+  openTodoDay(t.date);
+  if (expand) openDesc.add(id);
+  render();
+  requestAnimationFrame(() => {
+    const row = document.querySelector('[data-todo-id="' + id + '"]');
+    if (!row) return;
+    row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    row.classList.remove('flash');
+    void row.offsetWidth;
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 1400);
+  });
 }
 
 export function initTodo() {
@@ -281,6 +300,7 @@ function itemMenu(t) {
       const title = document.querySelector('[data-todo-id="' + t.id + '"] .td-item-title');
       if (title) inlineEdit(title, t.title, 'Task', (v) => saveTitle(t, v));
     } },
+    { label: t.description ? 'Edit description' : 'Add description', onClick: () => openDescription(t.id) },
     { label: 'Move to tomorrow', onClick: () => moveDay(t, 1) },
   ];
   if (t.date > todayISO()) items.push({ label: 'Move to today', onClick: () => moveDay(t, 0) });
@@ -377,7 +397,8 @@ function makeDraggable(row, t) {
 function render() {
   if (!els || !els.list) return;
   // A redraw mid-edit would throw the typed text away.
-  if (document.activeElement && document.activeElement.classList.contains('td-inline')) return;
+  if (document.activeElement && (document.activeElement.classList.contains('td-inline') ||
+      document.activeElement.classList.contains('td-desc'))) return;
   renderPage();
   renderCard();
 }
@@ -497,6 +518,58 @@ async function saveTitle(t, text) {
   catch (err) { notify.error('Could not rename that', err.message); }
 }
 
+// ─── Description ───
+// What a task is about, under its title. Which rows are open is kept here, so a
+// redraw (a tick on another task, say) leaves them open.
+const openDesc = new Set();
+const DESC_SAVE_MS = 400;
+
+function growArea(ta) {
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(240, ta.scrollHeight + 2) + 'px';
+}
+
+function openDescription(id) {
+  openDesc.add(id);
+  render();
+  const ta = document.querySelector('[data-todo-id="' + id + '"] .td-desc');
+  if (ta) { growArea(ta); ta.focus(); }
+}
+
+function descriptionPanel(t, toggleBtn) {
+  const wrap = document.createElement('div');
+  wrap.className = 'td-desc-wrap';
+  const ta = document.createElement('textarea');
+  ta.className = 'td-desc';
+  ta.rows = 2;
+  ta.maxLength = 2000;
+  ta.value = t.description || '';
+  ta.placeholder = 'What is this task about? What does "done" look like?';
+  ta.setAttribute('aria-label', 'Description of ' + t.title);
+  let timer = null;
+  let last = ta.value;
+  const save = async () => {
+    clearTimeout(timer);
+    timer = null;
+    if (ta.value === last) return;
+    last = ta.value;
+    try { await state.updateTodo(t.id, { description: ta.value }); }
+    catch (err) { notify.error('Could not save the description', err.message); }
+  };
+  ta.addEventListener('input', () => { growArea(ta); clearTimeout(timer); timer = setTimeout(save, DESC_SAVE_MS); });
+  ta.addEventListener('blur', async () => { await save(); render(); });
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      openDesc.delete(t.id);
+      save().then(() => { ta.blur(); render(); toggleBtn.focus(); });
+    }
+  });
+  wrap.appendChild(ta);
+  return wrap;
+}
+
 function renderItem(t) {
   const row = document.createElement('li');
   const overdue = !t.done && t.dueAt !== null && t.dueAt < Date.now();
@@ -516,12 +589,40 @@ function renderItem(t) {
 
   const body = document.createElement('div');
   body.className = 'td-item-body';
+  const head = document.createElement('div');
+  head.className = 'td-item-head';
+  const isOpen = openDesc.has(t.id);
+  const disclose = document.createElement('button');
+  disclose.type = 'button';
+  disclose.className = 'td-disclose' + (t.description ? ' has' : '');
+  disclose.setAttribute('aria-expanded', String(isOpen));
+  disclose.setAttribute('aria-label', (isOpen ? 'Hide' : 'Show') + ' description of ' + t.title);
+  disclose.title = t.description ? 'Description' : 'Add a description';
+  disclose.appendChild(icon(isOpen ? 'chevron-down' : 'chevron-right', 16));
+  disclose.addEventListener('click', () => {
+    // A box that still has focus would make the redraw wait; let it save first.
+    if (document.activeElement && document.activeElement.classList.contains('td-desc')) document.activeElement.blur();
+    if (openDesc.has(t.id)) openDesc.delete(t.id); else openDesc.add(t.id);
+    render();
+    if (openDesc.has(t.id)) {
+      const ta = document.querySelector('[data-todo-id="' + t.id + '"] .td-desc');
+      if (ta) { growArea(ta); ta.focus(); }
+    }
+  });
   const title = document.createElement('div');
   title.className = 'td-item-title';
   title.textContent = t.title;
   title.title = 'Double-click to rename';
   title.addEventListener('dblclick', () => inlineEdit(title, t.title, 'Task', (v) => saveTitle(t, v)));
-  body.appendChild(title);
+  head.append(disclose, title);
+  body.appendChild(head);
+  if (!isOpen && t.description) {
+    const prev = document.createElement('div');
+    prev.className = 'td-desc-preview';
+    prev.textContent = t.description.split('\n')[0];
+    prev.title = t.description.slice(0, 200);
+    body.appendChild(prev);
+  }
 
   if (t.kind === 'task') {
     const meta = document.createElement('button');
@@ -533,6 +634,7 @@ function renderItem(t) {
       inlineEdit(meta, formatEntry(t.minutes, t.startMinute), 'e.g. 45m at 2pm', (v) => saveTime(t, v)));
     body.appendChild(meta);
   }
+  if (isOpen) body.appendChild(descriptionPanel(t, disclose));
   row.appendChild(body);
 
   const tools = document.createElement('div');
@@ -559,6 +661,7 @@ function renderCard() {
     const name = document.createElement('span');
     name.className = 'name';
     name.textContent = t.title;
+    if (t.description) name.title = t.description.slice(0, 200);
     li.appendChild(name);
     if (!t.done && t.dueAt !== null) {
       const when = document.createElement('span');

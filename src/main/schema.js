@@ -6,7 +6,9 @@
 // here, so a corrupt vault file or a malformed IPC call fails at one known
 // place instead of turning into `undefined` three layers deeper.
 
-const SCHEMA_VERSION = 8;
+const crypto = require('crypto');
+
+const SCHEMA_VERSION = 9;
 const TODO_KINDS = ['task', 'remember'];
 
 const TAG_COLORS = [
@@ -25,6 +27,9 @@ const MAX_DONE_DATES = 4000;
 const MAX_FOLDER_NAME = 60;
 const MAX_MOOD_TEXT = 280;
 const MAX_PAGE_LINKS = 200;
+const MAX_TODO_DESCRIPTION = 2000;
+const MAX_FOLDER_TAGS = 8;
+const MAX_FOLDER_DEPTH = 6;
 const MOOD_FEELINGS = ['good', 'bad', 'note'];
 // How far ahead of an event its reminder may fire: up to a week.
 const MAX_REMIND_MINUTES = 7 * MINUTES_IN_DAY;
@@ -183,6 +188,14 @@ function optMinuteOfDay(v, field) {
   return v === null || v === undefined ? null : int(v, field, 0, MINUTES_IN_DAY - 1);
 }
 
+// Free text under a to-do: what it is about. Trailing space is dropped.
+function description(v, field) {
+  if (v === undefined || v === null) return '';
+  const out = str(v, field, MAX_TODO_DESCRIPTION * 2, { trim: false }).replace(/\s+$/, '');
+  if (out.length > MAX_TODO_DESCRIPTION) fail(field + ' is longer than ' + MAX_TODO_DESCRIPTION + ' characters');
+  return out;
+}
+
 function parseTodo(raw) {
   if (!isPlainObject(raw)) fail('todo must be an object');
   const kind = todoKind(raw.kind, 'todo.kind');
@@ -201,6 +214,7 @@ function parseTodo(raw) {
     date: isoDate(raw.date, 'todo.date'),
     minutes,
     startMinute,
+    description: description(raw.description, 'todo.description'),
     done: raw.done === true,
     dueAt,
     notified: raw.notified === true,
@@ -220,12 +234,14 @@ function parseTodoInput(raw) {
     minutes: raw.minutes === null || raw.minutes === undefined
       ? null : int(raw.minutes, 'minutes', 1, MINUTES_IN_DAY),
     startMinute: optMinuteOfDay(raw.startMinute, 'startMinute'),
+    description: description(raw.description, 'description'),
   };
 }
 
 function parseTodoPatch(raw) {
   if (!isPlainObject(raw)) fail('patch must be an object');
   const patch = {};
+  if ('description' in raw) patch.description = description(raw.description, 'patch.description');
   if ('title' in raw) {
     patch.title = str(raw.title, 'patch.title', MAX_TITLE);
     if (!patch.title) fail('patch.title cannot be empty');
@@ -383,19 +399,46 @@ function parseFolder(raw) {
   if (!isPlainObject(raw)) fail('folder must be an object');
   const name = str(raw.name, 'folder.name', MAX_FOLDER_NAME);
   if (!name) fail('folder.name cannot be empty');
+  const folderId = id(raw.id, 'folder.id', 'f');
   return {
-    id: id(raw.id, 'folder.id', 'f'),
+    id: folderId,
     name,
+    // Absent on a v8 folder: top level, no colour, no tags. A folder is never
+    // its own parent (the store repairs longer loops on load).
+    parentId: optFolderId(raw.parentId, 'folder.parentId') === folderId ? null : optFolderId(raw.parentId, 'folder.parentId'),
+    color: optColor(raw.color, 'folder.color'),
+    tagIds: folderTagIds(raw.tagIds === undefined ? [] : raw.tagIds, 'folder.tagIds'),
     createdAt: timestamp(raw.createdAt, 'folder.createdAt'),
     updatedAt: timestamp(raw.updatedAt, 'folder.updatedAt'),
   };
+}
+
+function folderTagIds(v, field) {
+  if (!Array.isArray(v)) fail(field + ' must be an array');
+  if (v.length > MAX_FOLDER_TAGS) fail(field + ' has more than ' + MAX_FOLDER_TAGS + ' tags');
+  return [...new Set(v.map((x, i) => id(x, field + '[' + i + ']', 't')))];
 }
 
 function parseFolderInput(raw) {
   if (!isPlainObject(raw)) fail('folder input must be an object');
   const name = str(raw.name === undefined ? '' : raw.name, 'name', MAX_FOLDER_NAME);
   if (!name) fail('name cannot be empty');
-  return { name };
+  return { name, parentId: optFolderId(raw.parentId, 'parentId') };
+}
+
+// What a folder may change: its name, where it sits, its colour and its tags.
+function parseFolderPatch(raw) {
+  if (!isPlainObject(raw)) fail('patch must be an object');
+  const patch = {};
+  if ('name' in raw) {
+    patch.name = str(raw.name, 'patch.name', MAX_FOLDER_NAME);
+    if (!patch.name) fail('patch.name cannot be empty');
+  }
+  if ('parentId' in raw) patch.parentId = optFolderId(raw.parentId, 'patch.parentId');
+  if ('color' in raw) patch.color = optColor(raw.color, 'patch.color');
+  if ('tagIds' in raw) patch.tagIds = folderTagIds(raw.tagIds, 'patch.tagIds');
+  if (Object.keys(patch).length === 0) fail('patch is empty');
+  return patch;
 }
 
 function optFolderId(v, field) {
@@ -410,24 +453,259 @@ function pageLinks(v, field) {
   return [...new Set(v.map((x, i) => id(x, field + '[' + i + ']', 'p')))];
 }
 
-function parsePage(raw) {
+// A page is a list of blocks (v9). `content` is plain text derived from the
+// blocks by blocksToText(): search, the graph, snippets and "Copy text" read it,
+// and the renderer never sends it. A v8 page has only `content`, so its blocks
+// are built from the lines of it: that is the migration, done at read time.
+//
+// Reading a page off disk is forgiving (a bad block is dropped, the rest of the
+// page loads); an IPC call passes `strict` and is refused instead.
+function parsePage(raw, { strict = false } = {}) {
   if (!isPlainObject(raw)) fail('page must be an object');
   const pageId = id(raw.id, 'page.id', 'p');
+  // Absent on a v7 page: no tables, not pinned.
+  const tables = pageTables(raw.tables === undefined ? [] : raw.tables, 'page.tables');
+  const source = raw.blocks === undefined
+    ? blocksFromContent(str(raw.content === undefined ? '' : raw.content, 'page.content', MAX_CONTENT, { trim: false }), tables)
+    : raw.blocks;
+  const blocks = settleBlocks(parseBlocks(source, 'page.blocks', { lenient: !strict }), tables, !strict);
+  if (JSON.stringify(blocks).length + JSON.stringify(tables).length > MAX_CONTENT) fail('page is too large');
   return {
     id: pageId,
     title: str(raw.title, 'page.title', MAX_TITLE),
-    content: str(raw.content, 'page.content', MAX_CONTENT, { trim: false }),
+    content: blocksToText(blocks, tables),
+    blocks,
     folderId: optFolderId(raw.folderId, 'page.folderId'),
     temporary: raw.temporary === true,
     // Absent on a v6 page, which reads as "links to nothing". A page never
     // links to itself.
     links: pageLinks(raw.links === undefined ? [] : raw.links, 'page.links').filter(l => l !== pageId),
-    // Absent on a v7 page: no tables, not pinned.
-    tables: pageTables(raw.tables === undefined ? [] : raw.tables, 'page.tables'),
+    tables,
     pinned: raw.pinned === true,
     createdAt: timestamp(raw.createdAt, 'page.createdAt'),
     updatedAt: timestamp(raw.updatedAt, 'page.updatedAt'),
   };
+}
+
+// ─── Page blocks ───
+
+const BLOCK_TEXT_TYPES = ['p', 'h1', 'h2', 'h3', 'caption', 'quote', 'bullet', 'number', 'todo', 'toggle'];
+const BLOCK_TYPES = [...BLOCK_TEXT_TYPES, 'divider', 'code', 'image', 'bookmark', 'table'];
+const ALIGNS = ['left', 'center', 'right', 'justify'];
+const IMAGE_ALIGNS = ['left', 'center', 'right'];
+const SPAN_MARKS = ['b', 'i', 'u', 's', 'code', 'sup', 'sub'];
+const CODE_LANGS = ['plain', 'javascript', 'typescript', 'python', 'html', 'css', 'json', 'bash', 'c', 'cpp',
+  'csharp', 'java', 'go', 'rust', 'sql', 'markdown'];
+const MAX_BLOCKS = 5000;
+const MAX_SPANS = 400;
+const MAX_SPAN_TEXT = 20000;
+const MAX_CODE_TEXT = 100000;
+const MAX_FOOTNOTE = 1000;
+const MAX_URL = 2000;
+const MAX_INDENT = 6;
+const MAX_BOOKMARK_TITLE = 200;
+// An image in the vault: our own uuid name and one of four types, so a name is
+// always safe to use as a file name and to put in a src.
+const ASSET_NAME = /^a_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(png|jpg|gif|webp)$/;
+
+function shortKey() { return crypto.randomUUID().replace(/-/g, '').slice(0, 12); }
+
+// A link the page may store: http or https only. (Only https is opened; see
+// index.js openExternal.) javascript:, data:, file: and the rest are refused.
+function webUrl(v, field) {
+  if (typeof v !== 'string' || v.length === 0 || v.length > MAX_URL) fail(field + ' must be a link');
+  let u;
+  try { u = new URL(v); } catch { fail(field + ' is not a valid link'); }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') fail(field + ' must start with http:// or https://');
+  return v;
+}
+
+function parseSpan(raw, field) {
+  if (!isPlainObject(raw)) fail(field + ' must be an object');
+  const out = { t: str(raw.t === undefined ? '' : raw.t, field + '.t', MAX_SPAN_TEXT, { trim: false }) };
+  if (raw.m !== undefined) {
+    if (!Array.isArray(raw.m)) fail(field + '.m must be an array');
+    for (const m of raw.m) if (!SPAN_MARKS.includes(m)) fail(field + '.m has an unknown mark');
+    const marks = SPAN_MARKS.filter(m => raw.m.includes(m));
+    if (marks.length) out.m = marks;
+  }
+  if (raw.c !== undefined && raw.c !== null) out.c = color(raw.c, field + '.c');
+  if (raw.bg !== undefined && raw.bg !== null) out.bg = color(raw.bg, field + '.bg');
+  if (raw.href !== undefined && raw.href !== null) out.href = webUrl(raw.href, field + '.href');
+  if (raw.fn !== undefined && raw.fn !== null) {
+    if (out.t !== '') fail(field + ' is a footnote, so it has no text');
+    out.fn = str(raw.fn, field + '.fn', MAX_FOOTNOTE, { trim: false });
+  }
+  return out;
+}
+
+function spanKey(s) { return JSON.stringify([s.m || null, s.c || null, s.bg || null, s.href || null]); }
+
+// Drop empty spans and join neighbours that look the same. A footnote is never
+// joined to anything.
+function normalizeSpans(spans) {
+  const out = [];
+  for (const s of spans) {
+    if (s.fn === undefined && s.t === '') continue;
+    const last = out[out.length - 1];
+    if (last && last.fn === undefined && s.fn === undefined && spanKey(last) === spanKey(s)) {
+      out[out.length - 1] = { ...last, t: last.t + s.t };
+    } else out.push({ ...s });
+  }
+  return out;
+}
+
+function parseSpans(raw, field) {
+  if (!Array.isArray(raw)) fail(field + ' must be an array');
+  if (raw.length > MAX_SPANS) fail(field + ' has more than ' + MAX_SPANS + ' spans');
+  return normalizeSpans(raw.map((s, i) => parseSpan(s, field + '[' + i + ']')));
+}
+
+function parseBlock(raw, field) {
+  if (!isPlainObject(raw)) fail(field + ' must be an object');
+  if (!BLOCK_TYPES.includes(raw.type)) fail(field + '.type is not a known block type');
+  const b = {
+    id: key(raw.id, field + '.id'),
+    type: raw.type,
+    indent: raw.indent === undefined ? 0 : int(raw.indent, field + '.indent', 0, MAX_INDENT),
+  };
+  if (BLOCK_TEXT_TYPES.includes(b.type)) {
+    const align = raw.align === undefined ? 'left' : raw.align;
+    if (!ALIGNS.includes(align)) fail(field + '.align is not a known alignment');
+    b.align = align;
+    b.spans = parseSpans(raw.spans === undefined ? [] : raw.spans, field + '.spans');
+    if (b.type === 'todo') b.checked = raw.checked === true;
+    if (b.type === 'toggle') b.open = raw.open === true;
+    return b;
+  }
+  switch (b.type) {
+    case 'code': {
+      const lang = raw.lang === undefined ? 'plain' : raw.lang;
+      if (!CODE_LANGS.includes(lang)) fail(field + '.lang is not a known language');
+      b.lang = lang;
+      b.text = str(raw.text === undefined ? '' : raw.text, field + '.text', MAX_CODE_TEXT, { trim: false });
+      b.wrap = raw.wrap === true;
+      break;
+    }
+    case 'image': {
+      if (typeof raw.asset !== 'string' || !ASSET_NAME.test(raw.asset)) fail(field + '.asset is not a valid image name');
+      b.asset = raw.asset;
+      b.width = raw.width === undefined ? 100 : int(raw.width, field + '.width', 10, 100);
+      const align = raw.align === undefined ? 'center' : raw.align;
+      if (!IMAGE_ALIGNS.includes(align)) fail(field + '.align is not a known alignment');
+      b.align = align;
+      b.caption = parseSpans(raw.caption === undefined ? [] : raw.caption, field + '.caption');
+      break;
+    }
+    case 'bookmark':
+      b.url = webUrl(raw.url, field + '.url');
+      b.title = str(raw.title === undefined ? '' : raw.title, field + '.title', MAX_BOOKMARK_TITLE);
+      break;
+    case 'table':
+      b.table = key(raw.table, field + '.table');
+      break;
+    default: break;   // divider
+  }
+  return b;
+}
+
+function parseBlocks(raw, field, { lenient = false } = {}) {
+  if (!Array.isArray(raw)) fail(field + ' must be an array');
+  if (raw.length > MAX_BLOCKS) fail(field + ' has more than ' + MAX_BLOCKS + ' blocks');
+  const out = [];
+  const ids = new Set();
+  raw.forEach((r, i) => {
+    let b;
+    try { b = parseBlock(r, field + '[' + i + ']'); } catch (err) {
+      if (!lenient) throw err;
+      console.error('schema: dropped a bad block:', err.message);
+      return;
+    }
+    if (ids.has(b.id)) {
+      if (!lenient) fail(field + ' has duplicate block ids');
+      do { b.id = shortKey(); } while (ids.has(b.id));
+    }
+    ids.add(b.id);
+    out.push(b);
+  });
+  return out;
+}
+
+// Make the blocks and the tables agree: a table block needs its table, and each
+// table is shown once. A table with no block is added at the end, and a page is
+// never without a block. `lenient` drops what does not fit; otherwise it fails.
+function settleBlocks(blocks, tables, lenient) {
+  const known = new Set(tables.map(t => t.id));
+  const used = new Set();
+  const out = [];
+  for (const b of blocks) {
+    if (b.type === 'table') {
+      if (!known.has(b.table)) { if (lenient) continue; fail('a table block points at a table that is not on the page'); }
+      if (used.has(b.table)) { if (lenient) continue; fail('a table is shown twice'); }
+      used.add(b.table);
+    }
+    out.push(b);
+  }
+  const ids = new Set(out.map(b => b.id));
+  for (const t of tables) {
+    if (used.has(t.id)) continue;
+    let bid;
+    do { bid = shortKey(); } while (ids.has(bid));
+    ids.add(bid);
+    out.push({ id: bid, type: 'table', indent: 0, table: t.id });
+  }
+  if (out.length === 0) out.push({ id: shortKey(), type: 'p', indent: 0, align: 'left', spans: [] });
+  return out;
+}
+
+const MARKER_LINE = /^\{\{table:([a-z0-9]{1,24})\}\}$/;
+
+// The v8 to v9 step: one paragraph per line of content, and a table block where
+// a marker line names a table the page has.
+function blocksFromContent(content, tables) {
+  const known = new Set(tables.map(t => t.id));
+  const blocks = [];
+  for (const line of content.split('\n')) {
+    const m = MARKER_LINE.exec(line);
+    if (m && known.has(m[1])) blocks.push({ id: shortKey(), type: 'table', indent: 0, table: m[1] });
+    else blocks.push({ id: shortKey(), type: 'p', indent: 0, align: 'left', spans: line ? [{ t: line }] : [] });
+  }
+  return blocks;
+}
+
+function spansText(spans) { return (spans || []).map(s => (s.fn === undefined ? s.t : '')).join(''); }
+
+function tableText(t) {
+  if (!t) return '';
+  const parts = [t.title];
+  for (const r of t.rows) {
+    for (const col of t.columns) {
+      const v = r.cells[col.id];
+      if (typeof v === 'string') parts.push(v);
+      else if (Array.isArray(v)) parts.push(v.join(' '));
+    }
+  }
+  return parts.filter(Boolean).join(' ');
+}
+
+// Plain text for search, the graph and "Copy text". One line per block; the
+// footnotes follow as numbered lines.
+function blocksToText(blocks, tables) {
+  const byId = new Map((tables || []).map(t => [t.id, t]));
+  const lines = [];
+  const notes = [];
+  for (const b of blocks) {
+    if (BLOCK_TEXT_TYPES.includes(b.type)) {
+      lines.push(spansText(b.spans));
+      for (const s of b.spans) if (s.fn !== undefined) notes.push(s.fn);
+    } else if (b.type === 'code') lines.push(b.text);
+    else if (b.type === 'image') lines.push(spansText(b.caption));
+    else if (b.type === 'bookmark') lines.push((b.title + ' ' + b.url).trim());
+    else if (b.type === 'table') lines.push(tableText(byId.get(b.table)));
+    else lines.push('');
+  }
+  notes.forEach((n, i) => lines.push('[' + (i + 1) + '] ' + n));
+  return lines.join('\n');
 }
 
 function parsePageInput(raw) {
@@ -443,7 +721,9 @@ function parsePagePatch(raw) {
   if (!isPlainObject(raw)) fail('patch must be an object');
   const patch = {};
   if ('title' in raw) patch.title = str(raw.title, 'patch.title', MAX_TITLE);
-  if ('content' in raw) patch.content = str(raw.content, 'patch.content', MAX_CONTENT, { trim: false });
+  // From v9 the text is derived from the blocks, so a caller cannot set it.
+  if ('content' in raw) fail('patch.content is derived from blocks; send blocks instead');
+  if ('blocks' in raw) patch.blocks = parseBlocks(raw.blocks, 'patch.blocks');
   if ('folderId' in raw) patch.folderId = optFolderId(raw.folderId, 'patch.folderId');
   if ('links' in raw) patch.links = pageLinks(raw.links, 'patch.links');
   if ('tables' in raw) patch.tables = pageTables(raw.tables, 'patch.tables');
@@ -469,7 +749,11 @@ function parsePagePatch(raw) {
 // type is dropped rather than failing the page, because a column can change
 // type after cells were filled, and a single stale cell must not cost the page.
 
-const TABLE_COL_TYPES = ['text', 'number', 'percent', 'progress', 'check', 'select', 'date'];
+const TABLE_COL_TYPES = ['text', 'number', 'percent', 'progress', 'check', 'select', 'date', 'status', 'multiselect', 'url'];
+const STATUS_GROUPS = ['todo', 'doing', 'done'];
+const COL_CALCS = ['none', 'count', 'empty', 'filled', 'sum', 'avg', 'min', 'max', 'checked'];
+const FILTER_OPS = ['contains', 'is', 'isnot', 'empty', 'notempty', 'gt', 'lt'];
+const MAX_FILTER_VALUE = 200;
 const MAX_TABLES_PER_PAGE = 20;
 const MAX_TABLE_COLS = 20;
 const MAX_TABLE_ROWS = 500;
@@ -492,7 +776,14 @@ function cellValue(col, v) {
     case 'percent':
     case 'progress': return typeof v === 'number' && Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : undefined;
     case 'check': return v === true ? true : undefined;
-    case 'select': return typeof v === 'string' && col.options.includes(v) ? v : undefined;
+    case 'select':
+    case 'status': return typeof v === 'string' && col.options.includes(v) ? v : undefined;
+    case 'multiselect': {
+      if (!Array.isArray(v)) return undefined;
+      const picked = [...new Set(v.filter(x => typeof x === 'string' && col.options.includes(x)))];
+      return picked.length ? picked.slice(0, MAX_SELECT_OPTIONS) : undefined;
+    }
+    case 'url': try { return webUrl(v, 'cell'); } catch { return undefined; }
     case 'date': try { return isoDate(v, 'cell'); } catch { return undefined; }
     default: return undefined;
   }
@@ -510,12 +801,34 @@ function parseTable(raw, field) {
     if (!TABLE_COL_TYPES.includes(c.type)) fail(f + '.type is not a known column type');
     const options = c.options === undefined ? [] : c.options;
     if (!Array.isArray(options) || options.length > MAX_SELECT_OPTIONS) fail(f + '.options must be a short array');
-    return {
+    const names = options.map((o, j) => str(o, f + '.options[' + j + ']', MAX_OPTION));
+    const rawGroups = Array.isArray(c.groups) ? c.groups : [];
+    // Options are de-duplicated; a status option's group travels with it, and one
+    // with no valid group takes a default by position (first to do, last done).
+    const pairs = [];
+    const seen = new Set();
+    names.forEach((o, j) => {
+      if (!o || seen.has(o)) return;
+      seen.add(o);
+      const g = STATUS_GROUPS.includes(rawGroups[j]) ? rawGroups[j]
+        : j === 0 ? 'todo' : j === names.length - 1 ? 'done' : 'doing';
+      pairs.push([o, g]);
+    });
+    const col = {
       id: key(c.id, f + '.id'),
       name: str(c.name === undefined ? '' : c.name, f + '.name', MAX_COL_NAME),
       type: c.type,
-      options: [...new Set(options.map((o, j) => str(o, f + '.options[' + j + ']', MAX_OPTION)).filter(Boolean))],
+      options: pairs.map(p => p[0]),
+      hidden: c.hidden === true,
+      calc: c.calc === undefined ? 'none' : (COL_CALCS.includes(c.calc) ? c.calc : fail(f + '.calc is not a known calculation')),
+      wrap: c.wrap === true,
     };
+    if (c.type === 'status') col.groups = pairs.map(p => p[1]);
+    if (c.width !== undefined && c.width !== null) {
+      if (typeof c.width !== 'number' || !Number.isFinite(c.width)) fail(f + '.width must be a number');
+      col.width = Math.round(Math.min(600, Math.max(60, c.width)));
+    }
+    return col;
   });
   if (new Set(columns.map(c => c.id)).size !== columns.length) fail(field + ' has duplicate column ids');
   const rows = raw.rows.map((r, i) => {
@@ -526,14 +839,32 @@ function parseTable(raw, field) {
       const v = cellValue(col, r.cells[col.id]);
       if (v !== undefined) cells[col.id] = v;
     }
-    return { id: key(r.id, f + '.id'), cells };
+    const row = { id: key(r.id, f + '.id'), cells };
+    if (r.createdAt !== undefined && r.createdAt !== null) row.createdAt = timestamp(r.createdAt, f + '.createdAt');
+    return row;
   });
   if (new Set(rows.map(r => r.id)).size !== rows.length) fail(field + ' has duplicate row ids');
+  const colIds = new Set(columns.map(c => c.id));
+  // Sort and filter name a column. One that has gone is dropped, not an error:
+  // the column may have been deleted while the setting was still stored.
+  let sort = null;
+  if (isPlainObject(raw.sort) && colIds.has(raw.sort.col) && (raw.sort.dir === 'asc' || raw.sort.dir === 'desc')) {
+    sort = { col: raw.sort.col, dir: raw.sort.dir };
+  }
+  let filter = null;
+  if (isPlainObject(raw.filter) && colIds.has(raw.filter.col) && FILTER_OPS.includes(raw.filter.op)) {
+    filter = { col: raw.filter.col, op: raw.filter.op,
+      value: str(raw.filter.value === undefined ? '' : raw.filter.value, field + '.filter.value', MAX_FILTER_VALUE) };
+  }
   return {
     id: key(raw.id, field + '.id'),
     title: str(raw.title === undefined ? '' : raw.title, field + '.title', MAX_TABLE_TITLE),
     columns,
     rows,
+    sort,
+    filter,
+    showTitle: raw.showTitle !== false,
+    showFooter: raw.showFooter !== false,
   };
 }
 
@@ -675,6 +1006,11 @@ const MIGRATIONS = {
   // 8 added goals (goals.json) and day notes (daynotes.json), both absent in an
   // older vault, plus page `tables` and `pinned`, which parsePage defaults.
   8: (state) => state,
+  // 9 added to-do `description`, folder `parentId`/`color`/`tagIds`, page `blocks`
+  // (rich text; parsePage builds them from a v8 page's `content`), new table
+  // column types, and the vault's assets/ folder (images). Everything defaults
+  // on read, so there is nothing to rewrite here.
+  9: (state) => state,
 };
 
 function migrate(state) {
@@ -700,7 +1036,7 @@ module.exports = {
   parseTodo, parseTodoInput, parseTodoPatch, parseTodoPlace,
   parseHabit, parseHabitInput, parseHabitToggle,
   parseMood, parseMoodInput,
-  parseFolder, parseFolderInput, parsePage, parsePageInput, parsePagePatch,
+  parseFolder, parseFolderInput, parseFolderPatch, MAX_FOLDER_DEPTH, parsePage, parsePageInput, parsePagePatch,
   parseGoal, parseGoalInput, parseDayNote, parseDayNoteInput, parseDayNotePatch,
-  TABLE_COL_TYPES,
+  TABLE_COL_TYPES, ASSET_NAME, CODE_LANGS, blocksToText, blocksFromContent,
 };

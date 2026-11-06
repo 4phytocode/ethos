@@ -1,0 +1,16 @@
+/* The command bar (js/commandbar.js): bottom right, clear of the sidebar. */
+
+.cmdbar { position: fixed; z-index: 320; right: calc(var(--sb-w, 0px) + 16px); bottom: 16px;
+          width: min(340px, calc(100vw - var(--sb-w, 0px) - 32px)); animation: cmd-in 0.18s steps(3) 1; }
+@keyframes cmd-in { from { opacity: 0.2; } to { opacity: 1; } }
+.cmd-body { display: flex; flex-direction: column; gap: 6px; padding: 8px; color: var(--fg); }
+.cmd-line { display: flex; align-items: center; gap: 6px; padding: 3px 6px; background: var(--field); box-shadow: var(--bevel-field); }
+.cmd-prompt { flex: none; font-size: 13px; color: var(--muted); }
+.cmd-input { flex: 1; min-width: 0; border: 0; background: transparent; box-shadow: none; padding: 2px 0;
+             font: inherit; font-size: 14px; color: var(--fg); outline: none; }
+.cmd-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.cmd-row { display: flex; justify-content: space-between; gap: 10px; padding: 4px 6px; cursor: pointer; font-size: 13px; }
+.cmd-row.active { background: var(--accent); color: var(--accent-fg); }
+.cmd-hint { opacity: 0.7; font-size: 11px; align-self: center; text-align: right; }
+.cmd-error { margin: 0; min-height: 1.1em; font-size: 12px; color: var(--danger); }
+@media (prefers-reduced-motion: reduce) { .cmdbar { animation: none; } }

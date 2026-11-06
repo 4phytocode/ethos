@@ -203,7 +203,7 @@ function createWindow() {
 
 app.whenReady().then(async () => {
   if (!hasLock) return;
-  protocolServer.handle(RENDERER_ROOT);
+  // The vault is built first so the protocol can serve the images inside it.
 
   // If the vault cannot be opened (a newer build wrote it, or the disk failed),
   // say so and stop. Carrying on would leave a process with no window, and any
@@ -213,6 +213,9 @@ app.whenReady().then(async () => {
     await vault.init();
     store = new Store(vault);
     await store.load();
+    protocolServer.handle(RENDERER_ROOT, { read: (name) => vault.readAsset(name) });
+    // Once per launch: images no page uses and older than a day go.
+    store.sweepAssets().catch(err => console.error('asset sweep failed:', err.message));
   } catch (err) {
     console.error('vault failed to open:', err.message);
     store = null;
@@ -237,6 +240,8 @@ app.whenReady().then(async () => {
   });
   ipc.register(store, {
     timers,
+    vault,
+    shutdown: quitForReal,
     onRendererReady: () => {
       if (remindersStarted) return;
       remindersStarted = true;

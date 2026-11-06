@@ -5,21 +5,20 @@
 // view, which is either the overview or one open page. Pages are separate from
 // journal notes, with their own model, files and IPC calls.
 //
-// A page's body is a list of blocks: text, and tables (notes-table.js). On disk
-// it stays one `content` string, with a `{{table:<id>}}` line where each table
-// sits, plus the tables themselves in `page.tables`. See "Blocks" below.
+// A page's body is a list of blocks (schema 9): text, lists, code, images, tables
+// and more. The block editor (editor/index.js) owns what is inside the page; this
+// file hands it a page, asks it what to save, and keeps the save timing.
 
 import * as state from './state.js';
 import { show, onLeave, current, showCtx } from './views.js';
 import { notify } from './notifications.js';
-import { confirmDialog } from './dialog.js';
-import { buildTable, makeTable, TEMPLATES } from './notes-table.js';
+import { confirmDialog, formDialog } from './dialog.js';
+import * as editor from './editor/index.js';
 
 const TYPING_SAVE_MS = 400;
 const OPEN_KEY = 'ethos.notes.openFolders';
 const SORT_KEY = 'ethos.notes.sort';
 const DRAG_TYPE = 'application/x-ethos-page';
-const MAX_TABLES = 20;
 
 let openPageId = null;
 let saveTimer = 0;
@@ -50,6 +49,12 @@ function el(tag, cls, text) {
 }
 
 const pageName = (p) => p.title || 'Untitled';
+
+const FOLDER_DRAG = 'application/x-ethos-folder';
+let draggingFolder = null;    // id of the folder being dragged (dragover cannot read dataTransfer)
+// Names for the tag palette, in the palette's own order.
+const COLOR_NAMES = ['Blue', 'Red', 'Green', 'Amber', 'Violet', 'Pink', 'Teal', 'Orange'];
+const MAX_DEPTH = 6;
 
 // The page's words, without table markers. For search, cards and the counter.
 const MARK_LINE = /^\{\{table:[a-z0-9]{1,24}\}\}$/gm;
@@ -106,7 +111,7 @@ async function duplicatePage(id) {
   try {
     const page = await state.createPage({ folderId: src.folderId, temporary: src.temporary });
     await state.updatePage(page.id, {
-      title: (pageName(src) + ' (copy)').slice(0, 200), content: src.content,
+      title: (pageName(src) + ' (copy)').slice(0, 200), blocks: src.blocks,
       tables: src.tables, links: src.links,
     });
     notify.success('Note duplicated', pageName(src));
@@ -134,9 +139,10 @@ async function moveToFolder(id, folderId) {
   } catch (err) { notify.error('Could not move the note', err.message); }
 }
 
-async function newFolder() {
+async function newFolder(parentId = null) {
   try {
-    const folder = await state.createFolder({ name: 'New folder' });
+    const folder = await state.createFolder({ name: 'New folder', parentId });
+    if (parentId) openFolders.add(parentId);
     openFolders.add(folder.id);
     saveOpen();
     renaming = folder.id; renameDraft = null;
@@ -159,12 +165,89 @@ async function renameFolder(id, name) {
 async function deleteFolder(id) {
   const folder = state.folder(id);
   if (!folder) return;
+  const parent = folder.parentId && state.folder(folder.parentId);
+  const sure = await confirmDialog({
+    title: 'Delete folder',
+    message: 'Delete the folder "' + folder.name + '"? Its notes and subfolders move to ' + (parent ? '"' + parent.name + '"' : 'Notes') + '.',
+    okLabel: 'Delete', danger: true,
+  });
+  if (!sure) return;
   try {
     await state.removeFolder(id);
+    openFolders.delete(id);
+    saveOpen();
     notify.info('Folder deleted', folder.name + ' — its notes were kept.');
   } catch (err) {
     notify.error('Could not delete the folder', err.message);
   }
+}
+
+async function patchFolder(id, patch, what) {
+  try { await state.updateFolder(id, patch); } catch (err) { notify.error('Could not ' + what, err.message); }
+}
+
+// A new tag, made here and put on the folder in one go.
+async function newTagFor(folder) {
+  const colors = state.tagColorPalette();
+  const v = await formDialog({
+    title: 'New tag', okLabel: 'Create and add',
+    fields: [{ key: 'name', label: 'Name', maxLength: 24 }, { key: 'color', label: 'Colour', kind: 'colors', colors, value: colors[0] }],
+    validate: (x) => (x.name.trim() ? '' : 'Give the tag a name.'),
+  });
+  if (!v) return;
+  try {
+    const tag = await state.createTag({ name: v.name.trim(), color: v.color });
+    const now = state.folder(folder.id);
+    if (now && !now.tagIds.includes(tag.id)) await state.updateFolder(folder.id, { tagIds: [...now.tagIds, tag.id] });
+  } catch (err) { notify.error('Could not add the tag', err.message); }
+}
+
+function folderMenu(folder) {
+  const colors = state.tagColorPalette();
+  const tags = state.tags();
+  const below = state.folderDescendants(folder.id);
+  const height = state.folderHeight(folder.id);
+  const targets = state.foldersInOrder().filter(x => x.folder.id !== folder.id && !below.has(x.folder.id));
+  const setOpen = (open) => {
+    for (const id of [folder.id, ...below]) { if (open) openFolders.add(id); else openFolders.delete(id); }
+    saveOpen();
+    renderTree();
+  };
+  const tagItems = tags.map(t => ({
+    label: t.name, color: t.color, checked: folder.tagIds.includes(t.id),
+    onClick: () => patchFolder(folder.id, { tagIds: folder.tagIds.includes(t.id)
+      ? folder.tagIds.filter(x => x !== t.id) : [...folder.tagIds, t.id] }, 'change the tags'),
+  }));
+  return [
+    { label: 'New note here', onClick: () => newPage({ folderId: folder.id }) },
+    { label: 'New subfolder', disabled: state.folderDepth(folder.id) >= MAX_DEPTH, onClick: () => newFolder(folder.id) },
+    { label: 'Rename', onClick: () => { renaming = folder.id; renameDraft = null; renderTree(); } },
+    { separator: true },
+    { label: 'Colour', submenu: [
+      { label: 'None', checked: !folder.color, onClick: () => patchFolder(folder.id, { color: null }, 'change the colour') },
+      ...colors.map((c, i) => ({ label: COLOR_NAMES[i] || c, color: c, checked: folder.color === c,
+        onClick: () => patchFolder(folder.id, { color: c }, 'change the colour') })),
+    ] },
+    { label: 'Tags', submenu: [
+      ...tagItems,
+      ...(tagItems.length ? [{ separator: true }] : []),
+      { label: 'New tag…', disabled: folder.tagIds.length >= 8, onClick: () => newTagFor(folder) },
+    ] },
+    { label: 'Move to', submenu: [
+      { label: 'Top level', disabled: !folder.parentId, onClick: () => patchFolder(folder.id, { parentId: null }, 'move the folder') },
+      ...targets.map(x => ({
+        label: '\u00a0\u00a0'.repeat(x.depth - 1) + x.folder.name,
+        checked: folder.parentId === x.folder.id,
+        disabled: x.depth + height > MAX_DEPTH,
+        onClick: () => { openFolders.add(x.folder.id); saveOpen(); patchFolder(folder.id, { parentId: x.folder.id }, 'move the folder'); },
+      })),
+    ] },
+    { separator: true },
+    { label: 'Expand all inside', onClick: () => setOpen(true) },
+    { label: 'Collapse all inside', onClick: () => setOpen(false) },
+    { separator: true },
+    { label: 'Delete folder', danger: true, onClick: () => deleteFolder(folder.id) },
+  ];
 }
 
 async function deletePage(id) {
@@ -176,7 +259,7 @@ async function deletePage(id) {
     okLabel: 'Delete', danger: true,
   });
   if (!sure) return;
-  if (openPageId === id) { clearTimeout(saveTimer); openPageId = null; blocks = []; bodyDirty = false; }
+  if (openPageId === id) { clearTimeout(saveTimer); openPageId = null; editor.closePage(); }
   try {
     await state.removePage(id);
     notify.info('Note deleted', pageName(page));
@@ -197,15 +280,15 @@ async function commit() {
   if (fTitle.value !== page.title) patch.title = fTitle.value;
   // The body is only written once it has been edited, so opening a page never
   // rewrites (and re-dates) it just because serialising normalised a blank line.
-  const wasDirty = bodyDirty;
-  if (bodyDirty) {
-    patch.content = serialize();
-    patch.tables = blocks.filter(b => b.kind === 'table').map(b => b.table);
-    bodyDirty = false;
+  const wasDirty = editor.isOpen() && editor.isDirty();
+  if (wasDirty) {
+    patch.blocks = editor.getBlocks();
+    patch.tables = editor.getTables();
+    editor.clearDirty();
   }
   if (!Object.keys(patch).length) return;
   try { await state.updatePage(page.id, patch); } catch (err) {
-    if (wasDirty) bodyDirty = true;
+    if (wasDirty) editor.markDirty();
     notify.error('Could not save the note', err.message);
   }
 }
@@ -220,165 +303,60 @@ export function openPage(id, focusTitle = false) {
   if (openPageId !== id) closePicker();
   const page = state.page(id);
   if (!page) return;
-  const fresh = openPageId !== id || !blocks.length;
+  const fresh = openPageId !== id || !editor.isOpen();
   openPageId = id;
   fTitle.value = page.title;
-  if (fresh) buildBlocks(page);
+  if (fresh) editor.openPage(page);
   if (current() !== 'notes-page') show('notes-page');
   renderView();
   doc.classList.remove('nt-enter');
   void doc.offsetWidth;
   doc.classList.add('nt-enter');
-  requestAnimationFrame(sizeAll);
   if (focusTitle) fTitle.focus();
-  else { const first = blocksEl.querySelector('textarea'); if (first) first.focus(); }
+  else editor.focusStart();
+}
+
+// Shows a folder in the tree: opens every folder above it, scrolls to it, flashes it.
+export function revealFolder(id) {
+  const folder = state.folder(id);
+  if (!folder) return;
+  if (current() !== 'notes-page') show('notes-page');
+  for (const f of state.folderChain(id)) openFolders.add(f.id);
+  saveOpen();
+  renderTree();
+  const sidebar = document.getElementById('sidebar');
+  if (sidebar && document.body.classList.contains('sb-hidden')) document.getElementById('sb-show')?.click();
+  requestAnimationFrame(() => {
+    const row = tree.querySelector('[data-folder-id="' + id + '"]');
+    if (!row) return;
+    row.scrollIntoView({ block: 'center' });
+    row.classList.remove('flash');
+    void row.offsetWidth;
+    row.classList.add('flash');
+    setTimeout(() => row.classList.remove('flash'), 1400);
+  });
+}
+
+// A note can use the whole width of the window instead of a centred column.
+const FULL_KEY = 'ethos.notes.fullWidth';
+function setFullWidth(on) {
+  document.body.classList.toggle('nt-full', on);
+  try { localStorage.setItem(FULL_KEY, on ? '1' : '0'); } catch { /* not fatal */ }
 }
 
 export function openHome() {
   commit();
   openPageId = null;
-  blocks = [];
+  editor.closePage();
   if (current() !== 'notes-page') show('notes-page');
   renderView();
 }
 
-// ─── Blocks: the page body as text and tables ───
-// `content` is split at marker lines into text blocks with a table between
-// each pair. There is always a text block before and after a table, so there
-// is somewhere to type. Text blocks are auto-growing textareas; the first one
-// keeps the id `nt-body`.
+// ─── The page body ───
+// Typing and structure changes reach here through the editor's onChange: typing
+// waits for the pause, structure (a table row added, say) is written at once.
 
-const MARK = /^\{\{table:([a-z0-9]{1,24})\}\}$/;
-let blocks = [];            // [{ kind: 'text', el } | { kind: 'table', table, el }]
-let bodyDirty = false;
-let lastText = null;        // the text block that last had the caret, and where
-let lastCaret = 0;
-
-function splitContent(page) {
-  const byId = new Map(page.tables.map(t => [t.id, structuredClone(t)]));
-  const out = [];
-  const used = new Set();
-  let buf = [];
-  for (const line of page.content.split('\n')) {
-    const m = MARK.exec(line);
-    if (m && byId.has(m[1]) && !used.has(m[1])) {
-      out.push({ kind: 'text', text: buf.join('\n') });
-      out.push({ kind: 'table', table: byId.get(m[1]) });
-      used.add(m[1]);
-      buf = [];
-    } else buf.push(line);
-  }
-  out.push({ kind: 'text', text: buf.join('\n') });
-  // A table whose marker is missing (a hand-edited file) still shows, last.
-  for (const t of page.tables) {
-    if (!used.has(t.id)) out.push({ kind: 'table', table: byId.get(t.id) }, { kind: 'text', text: '' });
-  }
-  return out;
-}
-
-function serialize() {
-  const parts = blocks.map(b => (b.kind === 'text' ? b.el.value : '{{table:' + b.table.id + '}}'));
-  // The empty text blocks the editor keeps around tables are not content.
-  if (parts.length > 1 && blocks[0].kind === 'text' && parts[0] === '') parts.shift();
-  if (parts.length > 1 && blocks[blocks.length - 1].kind === 'text' && parts[parts.length - 1] === '') parts.pop();
-  return parts.join('\n');
-}
-
-function size(ta) {
-  ta.style.height = 'auto';
-  ta.style.height = ta.scrollHeight + 'px';
-}
-function sizeAll() { for (const b of blocks) if (b.kind === 'text') size(b.el); }
-
-function edited() { bodyDirty = true; queueSave(); }
-
-function buildBlocks(page) {
-  blocks = splitContent(page);
-  bodyDirty = false;
-  renderBlocks();
-}
-
-function textBlock(b) {
-  const ta = el('textarea', 'nt-body nt-seg');
-  ta.value = b.text !== undefined ? b.text : '';
-  delete b.text;
-  ta.rows = 1;
-  ta.setAttribute('data-typing-sound', '');
-  ta.setAttribute('aria-label', 'Note text');
-  const remember = () => { lastText = b; lastCaret = ta.selectionStart; };
-  ta.addEventListener('focus', remember);
-  ta.addEventListener('keyup', remember);
-  ta.addEventListener('mouseup', remember);
-  ta.addEventListener('input', () => { size(ta); remember(); edited(); });
-  ta.addEventListener('keydown', (e) => {
-    // "/table" (or "/tracker", "/grades") on a line of its own, then Enter.
-    if (e.key !== 'Enter' || e.shiftKey) return;
-    const caret = ta.selectionStart;
-    const start = ta.value.lastIndexOf('\n', caret - 1) + 1;
-    const line = ta.value.slice(start, caret).trim().toLowerCase();
-    const slash = { '/table': 'blank', '/tracker': 'tracker', '/grades': 'grades' }[line];
-    if (!slash || ta.value.slice(caret).split('\n')[0].trim()) return;
-    e.preventDefault();
-    ta.value = ta.value.slice(0, start) + ta.value.slice(caret);
-    lastText = b;
-    lastCaret = start;
-    insertTable(slash);
-  });
-  b.el = ta;
-  return ta;
-}
-
-function tableBlock(b) {
-  b.el = buildTable(b.table, {
-    onChange: (_t, immediate) => { bodyDirty = true; if (immediate) commit(); else queueSave(); },
-    onDelete: () => removeTable(b),
-  });
-  return b.el;
-}
-
-function renderBlocks() {
-  blocksEl.replaceChildren(...blocks.map(b => (b.kind === 'text' ? textBlock(b) : tableBlock(b))));
-  const texts = blocks.filter(b => b.kind === 'text');
-  texts[0].el.id = 'nt-body';
-  texts[texts.length - 1].el.classList.add('nt-seg-last');
-  if (blocks.length === 1) texts[0].el.placeholder = 'Write something... (type /table for a table)';
-  requestAnimationFrame(sizeAll);
-}
-
-function insertTable(templateId) {
-  const tables = blocks.filter(b => b.kind === 'table').length;
-  if (tables >= MAX_TABLES) { notify.warn('Too many tables', 'A note can hold ' + MAX_TABLES + ' tables.'); return; }
-  let target = blocks.includes(lastText) ? lastText : blocks.filter(b => b.kind === 'text').pop();
-  const value = target.el.value;
-  const caret = Math.min(Math.max(0, lastCaret), value.length);
-  const before = value.slice(0, caret).replace(/\n$/, '');
-  const after = value.slice(caret).replace(/^\n/, '');
-  const i = blocks.indexOf(target);
-  const table = { kind: 'table', table: makeTable(templateId) };
-  blocks.splice(i, 1, { kind: 'text', text: before }, table, { kind: 'text', text: after });
-  renderBlocks();
-  bodyDirty = true;
-  commit();
-  const first = table.el.querySelector('tbody input, tbody select, tbody [role="slider"]');
-  if (first) first.focus();
-}
-
-function removeTable(b) {
-  const i = blocks.indexOf(b);
-  if (i === -1) return;
-  const prev = blocks[i - 1], next = blocks[i + 1];
-  const joined = [prev.el.value, next.el.value].filter(Boolean).join('\n');
-  blocks.splice(i - 1, 3, { kind: 'text', text: joined });
-  renderBlocks();
-  bodyDirty = true;
-  commit();
-  notify.info('Table deleted', b.table.title || 'Untitled table');
-}
-
-function tableMenu(button) {
-  const r = button.getBoundingClientRect();
-  showCtx({ clientX: r.left, clientY: r.bottom + 2 }, TEMPLATES.map(t => ({ label: t.label, onClick: () => insertTable(t.id) })));
-}
+function edited(immediate) { if (immediate) commit(); else queueSave(); }
 
 // ─── Sidebar tree ───
 
@@ -410,8 +388,8 @@ function pageMenu(page) {
   return [
     { label: page.pinned ? 'Unpin' : 'Pin to top', onClick: () => setPinned(page.id, !page.pinned) },
     { label: 'Duplicate', onClick: () => duplicatePage(page.id) },
-    ...state.folders().filter(f => f.id !== page.folderId)
-      .map(f => ({ label: 'Move to ' + f.name, onClick: () => moveToFolder(page.id, f.id) })),
+    ...state.foldersInOrder().filter(x => x.folder.id !== page.folderId)
+      .map(x => ({ label: 'Move to ' + state.folderPath(x.folder.id), onClick: () => moveToFolder(page.id, x.folder.id) })),
     ...(page.folderId ? [{ label: 'Remove from folder', onClick: () => moveToFolder(page.id, null) }] : []),
     { label: page.temporary ? 'Keep (not temporary)' : 'Make temporary',
       onClick: () => state.updatePage(page.id, { temporary: !page.temporary }).catch(err => notify.error('Could not update the note', err.message)) },
@@ -419,10 +397,23 @@ function pageMenu(page) {
   ];
 }
 
-// Makes `node` accept a dragged note; `folderId` null unfiles it.
+// Makes `node` accept a dragged note or folder; `folderId` null is the top level.
+// A folder cannot be dropped on itself, inside its own folders, or deeper than
+// six levels (the main process enforces the same; this just shows no-drop).
+function folderDropOk(folderId) {
+  if (!draggingFolder) return true;
+  if (folderId === draggingFolder) return false;
+  if (folderId && state.folderDescendants(draggingFolder).has(folderId)) return false;
+  const above = folderId ? state.folderDepth(folderId) : 0;
+  return above + state.folderHeight(draggingFolder) <= MAX_DEPTH;
+}
+
 function dropTarget(node, folderId) {
   node.addEventListener('dragover', (e) => {
-    if (!e.dataTransfer.types.includes(DRAG_TYPE)) return;
+    const types = e.dataTransfer.types;
+    const isFolder = types.includes(FOLDER_DRAG);
+    if (!isFolder && !types.includes(DRAG_TYPE)) return;
+    if (isFolder && !folderDropOk(folderId)) { e.dataTransfer.dropEffect = 'none'; return; }
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     node.classList.add('drop');
@@ -430,6 +421,16 @@ function dropTarget(node, folderId) {
   node.addEventListener('dragleave', (e) => { if (!node.contains(e.relatedTarget)) node.classList.remove('drop'); });
   node.addEventListener('drop', (e) => {
     node.classList.remove('drop');
+    const fid = e.dataTransfer.getData(FOLDER_DRAG);
+    if (fid) {
+      e.preventDefault();
+      draggingFolder = null;
+      if (folderDropOk(folderId) && (state.folder(fid) || {}).parentId !== folderId) {
+        if (folderId) { openFolders.add(folderId); saveOpen(); }
+        patchFolder(fid, { parentId: folderId }, 'move the folder');
+      }
+      return;
+    }
     const id = e.dataTransfer.getData(DRAG_TYPE);
     if (!id) return;
     e.preventDefault();
@@ -437,12 +438,18 @@ function dropTarget(node, folderId) {
   });
 }
 
-function folderRow(folder) {
+function folderRow(folder, depth = 0) {
   const open = openFolders.has(folder.id);
   const wrap = el('div', 'sb-folder' + (open ? ' open' : ''));
-  const row = el('div', 'sb-row');
-  row.style.setProperty('--depth', 0);
+  const row = el('div', 'sb-row' + (folder.color ? ' has-color' : ''));
+  row.style.setProperty('--depth', depth);
+  row.dataset.folderId = folder.id;
+  if (folder.color) row.style.setProperty('--folder-color', folder.color);
   const pages = state.pages().filter(p => p.folderId === folder.id);
+  const subfolders = state.folderChildren(folder.id);
+  const folderTags = state.tagsOf(folder);
+
+  const glyph = () => { const g = icon('folder'); if (folder.color) g.style.color = folder.color; return g; };
 
   if (renaming === folder.id) {
     const input = el('input', 'sb-rename');
@@ -453,7 +460,7 @@ function folderRow(folder) {
       if (e.key === 'Escape') { renaming = null; renameDraft = null; renderTree(); }
     });
     input.addEventListener('blur', () => { if (renaming === folder.id) renameFolder(folder.id, input.value); });
-    row.append(icon('folder'), input);
+    row.append(glyph(), input);
     requestAnimationFrame(() => { input.focus(); input.select(); });
   } else {
     const main = el('button', 'sb-row-main');
@@ -461,8 +468,19 @@ function folderRow(folder) {
     main.setAttribute('aria-expanded', String(open));
     const caret = el('span', 'sb-caret');
     caret.append(icon('caret'));
-    main.append(caret, icon('folder'), el('span', 'sb-row-label', folder.name),
-      el('span', 'sb-count', String(pages.length)));
+    main.append(caret, glyph(), el('span', 'sb-row-label', folder.name));
+    if (folderTags.length) {
+      const dots = el('span', 'sb-tags');
+      for (const t of folderTags.slice(0, 3)) {
+        const d = el('i', 'sb-tag-dot');
+        d.style.background = t.color;
+        dots.append(d);
+      }
+      if (folderTags.length > 3) dots.append(el('span', 'sb-tag-more', '+' + (folderTags.length - 3)));
+      main.append(dots);
+      main.title = folder.name + ' · ' + folderTags.map(t => t.name).join(', ');
+    }
+    main.append(el('span', 'sb-count', String(state.noteCountDeep(folder.id))));
     main.addEventListener('click', () => {
       if (openFolders.has(folder.id)) openFolders.delete(folder.id); else openFolders.add(folder.id);
       saveOpen();
@@ -470,6 +488,15 @@ function folderRow(folder) {
       main.setAttribute('aria-expanded', String(wrap.classList.contains('open')));
     });
     main.addEventListener('dblclick', () => { renaming = folder.id; renameDraft = null; renderTree(); });
+    // Drag a folder onto another folder to nest it, or onto "Notes" for the top level.
+    main.draggable = true;
+    main.addEventListener('dragstart', (e) => {
+      draggingFolder = folder.id;
+      e.dataTransfer.setData(FOLDER_DRAG, folder.id);
+      e.dataTransfer.effectAllowed = 'move';
+      row.classList.add('dragging');
+    });
+    main.addEventListener('dragend', () => { draggingFolder = null; row.classList.remove('dragging'); });
 
     const add = el('button', 'sb-row-tool');
     add.type = 'button';
@@ -486,13 +513,8 @@ function folderRow(folder) {
     const menu = (e) => {
       e.preventDefault();
       e.stopPropagation();
-      showCtx(e, [
-        { label: 'New note here', onClick: () => newPage({ folderId: folder.id }) },
-        { label: 'Rename', onClick: () => { renaming = folder.id; renameDraft = null; renderTree(); } },
-        { label: 'Delete folder (keeps notes)', onClick: () => deleteFolder(folder.id) },
-        { label: 'Expand all folders', onClick: () => setAllOpen(true) },
-        { label: 'Collapse all folders', onClick: () => setAllOpen(false) },
-      ]);
+      if (e.type === 'click') { const r = more.getBoundingClientRect(); showCtx({ x: r.left, y: r.bottom + 2 }, folderMenu(folder)); }
+      else showCtx(e, folderMenu(folder));
     };
     more.addEventListener('click', menu);
     main.addEventListener('contextmenu', menu);
@@ -504,10 +526,11 @@ function folderRow(folder) {
   // from 0fr to 1fr where height:auto cannot.
   const kids = el('div', 'sb-kids');
   const inner = el('div', 'sb-kids-inner');
-  for (const p of pages) inner.append(pageRow(p, 1));
-  if (!pages.length) {
+  for (const sub of subfolders) inner.append(folderRow(sub, depth + 1));
+  for (const p of pages) inner.append(pageRow(p, depth + 1));
+  if (!pages.length && !subfolders.length) {
     const empty = el('div', 'sb-row sb-empty', 'Empty');
-    empty.style.setProperty('--depth', 1);
+    empty.style.setProperty('--depth', depth + 1);
     inner.append(empty);
   }
   kids.append(inner);
@@ -537,7 +560,7 @@ function renderTree() {
     for (const p of pinned) tree.append(pageRow(p, 0));
     tree.append(el('div', 'sb-sub', 'All notes'));
   }
-  for (const f of state.folders()) tree.append(folderRow(f));
+  for (const f of state.folderChildren(null)) tree.append(folderRow(f, 0));
   for (const p of state.pages().filter(p => !p.folderId && !p.temporary)) tree.append(pageRow(p, 0));
 
   const temp = state.pages().filter(p => p.temporary);
@@ -554,7 +577,7 @@ function renderTree() {
 
 function renderView() {
   const page = openPageId && state.page(openPageId);
-  if (!page) { openPageId = null; blocks = []; }
+  if (!page) { openPageId = null; editor.closePage(); }
   home.hidden = !!page;
   doc.hidden = !page;
   if (page) renderDoc(page); else renderHome();
@@ -563,15 +586,15 @@ function renderView() {
 
 function renderDoc(page) {
   const folder = page.folderId && state.folder(page.folderId);
-  fCrumb.textContent = folder ? folder.name : (page.temporary ? 'Temporary' : 'Notes');
+  fCrumb.textContent = folder ? 'Notes \u203a ' + state.folderPath(folder.id, ' \u203a ') : (page.temporary ? 'Temporary' : 'Notes');
 
   fMove.replaceChildren();
   const none = el('option', null, 'No folder');
   none.value = '';
   fMove.append(none);
-  for (const f of state.folders()) {
-    const o = el('option', null, f.name);
-    o.value = f.id;
+  for (const x of state.foldersInOrder()) {
+    const o = el('option', null, '\u00a0\u00a0'.repeat(x.depth - 1) + x.folder.name);
+    o.value = x.folder.id;
     fMove.append(o);
   }
   fMove.value = page.folderId || '';
@@ -914,10 +937,11 @@ export function initNotes() {
   document.getElementById('nt-new-folder').addEventListener('click', newFolder);
   document.getElementById('nt-find').addEventListener('click', openSwitcher);
   document.getElementById('nt-crumb').addEventListener('click', openHome);
-  const addTable = document.getElementById('nt-add-table');
-  // mousedown would move focus off the text, and with it the caret we insert at.
-  addTable.addEventListener('mousedown', (e) => e.preventDefault());
-  addTable.addEventListener('click', (e) => { e.stopPropagation(); tableMenu(addTable); });
+  try { if (localStorage.getItem(FULL_KEY) === '1') document.body.classList.add('nt-full'); } catch { /* default */ }
+  editor.initEditor({
+    host: blocksEl, doc, before: fTitle, onChange: edited,
+    notify: (title, message, type) => (notify[type] || notify.info)(title, message),
+  });
   const more = document.getElementById('nt-more');
   more.addEventListener('click', () => {
     const page = openPageId && state.page(openPageId);
@@ -930,13 +954,14 @@ export function initNotes() {
         try { await navigator.clipboard.writeText(plainText(state.page(page.id) || page)); notify.success('Copied', pageName(page)); }
         catch (err) { notify.error('Could not copy', err.message); }
       } },
+      { label: 'Full width', checked: document.body.classList.contains('nt-full'), onClick: () => setFullWidth(!document.body.classList.contains('nt-full')) },
       { label: 'Jump to another note (Ctrl+P)', onClick: openSwitcher },
     ]);
   });
 
   fTitle.addEventListener('input', queueSave);
   fTitle.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); const first = blocksEl.querySelector('textarea'); if (first) first.focus(); }
+    if (e.key === 'Enter') { e.preventDefault(); editor.focusStart(); }
   });
   fMove.addEventListener('change', () => { if (openPageId) moveToFolder(openPageId, fMove.value || null); });
   fTemp.addEventListener('click', async () => {
@@ -959,7 +984,6 @@ export function initNotes() {
     if (k === 'p') { e.preventDefault(); openSwitcher(); }
     else if (k === 'n' && current() === 'notes-page' && !document.querySelector('.dlg-scrim')) { e.preventDefault(); newPage({}); }
   });
-  window.addEventListener('resize', () => { if (current() === 'notes-page') sizeAll(); });
 
   // Leave hooks run before the view switch lands, so redraw the tree after it
   // to drop the open page's highlight.

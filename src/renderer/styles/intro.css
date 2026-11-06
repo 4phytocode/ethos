@@ -37,6 +37,38 @@
                             animation: intro-e-in 0.4s ease-out both; }
 @keyframes intro-e-in { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 
+/* ---- Shut-down outro: the intro played backwards (js/outro.js) ---------------- */
+
+#outro { position: fixed; inset: 0; z-index: 1000; background: #000000; color: #d4e6ff; opacity: 0;
+         transition: opacity 0.3s ease; }
+#outro.show { opacity: 1; }
+#outro-boot { position: absolute; left: 10vw; top: 12vh; margin: 0; display: none;
+              font: 15px/1.8 var(--font-ui, ui-monospace, Consolas, monospace); white-space: pre; }
+#outro-boot p { margin: 0; }
+#outro-boot .ok { color: #9fe0b8; }
+#outro-boot .fail { color: #ff8a80; }
+#outro.boot #outro-boot { display: block; }
+/* The e and the ring go in one frame, as the intro's boot text did. */
+#outro.boot #outro-e, #outro.boot .ring { display: none; }
+#outro .ring { position: absolute; left: 50%; top: 50%; width: 460px; height: 460px;
+               transform: translate(-50%, -50%); overflow: visible; opacity: 0; transition: opacity 0.3s ease; }
+#outro.ring-in .ring { opacity: 1; }
+#outro .ring path { fill: none; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 0; stroke-width: 3; }
+#outro .ring.back { z-index: 1; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.12)); }
+#outro .ring.front { z-index: 3; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.35)); }
+#outro .ring.back path { stroke: #6e6e6e; }
+#outro .ring.front path { stroke: #ffffff; }
+/* The ring un-draws: the intro's draw, run the other way. */
+#outro.ring-undraw .ring path { animation: ring-undraw 0.9s cubic-bezier(0.25, 0, 0.35, 1) forwards; }
+@keyframes ring-undraw { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 1; } }
+#outro-e { position: absolute; left: calc(50% - 191px); top: calc(50% - 120px); width: 400px; height: 240px;
+           z-index: 2; overflow: visible; transform-origin: 0 0; }
+#outro-dot { position: absolute; left: 50%; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px;
+             border-radius: 50%; background: #ffffff; opacity: 0; }
+#outro-dot.blink { animation: outro-dot-blink 0.9s steps(1, end) 1; }
+@keyframes outro-dot-blink { 0% { opacity: 1; } 25% { opacity: 0; } 50% { opacity: 1; } 75% { opacity: 0; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { #outro { transition: none; } }
+
 /* The dot blinks once the e has landed back in the brand mark: four flashes over 1s,
    with each gap between them a little longer than the last, so it settles rather than stops. */
 #brand-logo.dot-blink circle { animation: brand-dot-blink 1s steps(1, end) 1; }

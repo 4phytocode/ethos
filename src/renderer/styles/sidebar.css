@@ -90,7 +90,8 @@ body[data-view="notes-page"] .sb-section-title { color: var(--fg); }
              font-family: inherit; font-size: 13px; outline: none; }
 .sb-row > svg { flex: none; margin-left: 10px; color: var(--muted); }
 
-.sb-foot { padding-top: 8px; border-top: 1px solid var(--line); }
+.sb-foot { padding-top: 8px; border-top: 1px solid var(--line); display: flex; align-items: flex-end; gap: 6px; }
+.sb-foot > .sidebar-btn { flex: none; width: auto; }
 
 /* === Show button, while hidden === */
 .sb-show { position: fixed; top: 12px; right: 12px; z-index: 21; width: 32px; height: 32px;
@@ -122,3 +123,9 @@ body.sb-hidden .back { right: 52px; }
 .sb-row.drop .sb-row-main { color: inherit; }
 .sb-row.dragging { opacity: 0.45; }
 .sb-page.pinned .sb-row-label { font-weight: 600; }
+
+/* Folders: a colour bar, tag dots (v1.1). */
+.sb-row.has-color { box-shadow: inset 2px 0 0 var(--folder-color); }
+.sb-tags { flex: none; display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; }
+.sb-tag-dot { display: block; width: 6px; height: 6px; box-shadow: 0 0 0 1px color-mix(in srgb, var(--fg) 40%, transparent); }
+.sb-tag-more { font-size: 10px; color: var(--muted); }
